@@ -5789,6 +5789,16 @@ static bfd_vma
 offset_with_removed_text_map (text_action_list *action_list, bfd_vma offset)
 {
   int removed = removed_by_actions_map (action_list, offset, FALSE);
+#if CHECK_OPT & 2
+  text_action *r = action_list->head;
+  int removed1 = removed_by_actions (&r, offset, FALSE);
+  if (removed != removed1)
+    {
+      fprintf (stderr, "%s:%d removed!= removed1 %d/%d\n",
+	       __func__, __LINE__, removed, removed1);
+      abort();
+    }
+#endif
   return offset - removed;
 }
 
@@ -10066,6 +10076,24 @@ translate_reloc (const r_reloc *orig_rel, r_reloc *new_rel, asection *sec)
 						   target_offset, FALSE) -
 	base_removed;
 
+#if CHECK_OPT & 2
+      text_action *act = relax_info->action_list.head;
+      int base_removed1 = removed_by_actions (&act, base_offset, FALSE);
+      int addend_removed1 = removed_by_actions (&act, target_offset, FALSE);
+
+      if (base_removed != base_removed1)
+	{
+	  fprintf (stderr, "%s:%d base_removed != base_removed1: %d/%d\n",
+		   __func__, __LINE__, base_removed, base_removed1);
+	  abort();
+	}
+      if (addend_removed != addend_removed1)
+	{
+	  fprintf (stderr, "%s:%d addend_removed != addend_removed1: %d/%d\n",
+		   __func__, __LINE__, addend_removed, addend_removed1);
+	  abort();
+	}
+#endif
       new_rel->target_offset = target_offset - base_removed - addend_removed;
       new_rel->rela.r_addend -= addend_removed;
     }
@@ -10078,6 +10106,24 @@ translate_reloc (const r_reloc *orig_rel, r_reloc *new_rel, asection *sec)
 						   base_offset, FALSE) -
 	tgt_removed;
 
+#if CHECK_OPT & 2
+      text_action *act = relax_info->action_list.head;
+      int tgt_removed1 = removed_by_actions (&act, target_offset, FALSE);
+      int addend_removed1 = removed_by_actions (&act, base_offset, FALSE);
+
+      if (tgt_removed != tgt_removed1)
+	{
+	  fprintf (stderr, "%s:%d tgt_removed != tgt_removed1: %d/%d\n",
+		   __func__, __LINE__, tgt_removed, tgt_removed1);
+	  abort();
+	}
+      if (addend_removed != addend_removed1)
+	{
+	  fprintf (stderr, "%s:%d addend_removed != addend_removed1: %d/%d\n",
+		   __func__, __LINE__, addend_removed, addend_removed1);
+	  abort();
+	}
+#endif
       new_rel->target_offset = target_offset - tgt_removed;
       new_rel->rela.r_addend += addend_removed;
     }
@@ -10403,6 +10449,16 @@ relax_property_section (bfd *abfd,
 	      int removed_by_old_offset =
 		removed_by_actions_map (&target_relax_info->action_list,
 					old_offset, FALSE);
+#if CHECK_OPT & 2
+	      text_action *act = target_relax_info->action_list.head;
+	      int removed_by_old_offset1 = removed_by_actions (&act, old_offset, FALSE);
+	      if (removed_by_old_offset != removed_by_old_offset1)
+		{
+		  fprintf (stderr, "%s:%d removed_by_old_offset != removed_by_old_offset1: %d/%d\n",
+			   __func__, __LINE__, removed_by_old_offset, removed_by_old_offset1);
+		  abort();
+		}
+#endif
 	      new_offset = old_offset - removed_by_old_offset;
 
 	      /* Assert that we are not out of bounds.  */
@@ -10431,6 +10487,16 @@ relax_property_section (bfd *abfd,
 			removed_by_actions_map (&target_relax_info->action_list,
 						old_offset, TRUE);
 		      new_offset = old_offset - removed_by_old_offset;
+#if CHECK_OPT & 2
+		      act = target_relax_info->action_list.head;
+		      removed_by_old_offset1 = removed_by_actions (&act, old_offset, TRUE);
+		      if (removed_by_old_offset != removed_by_old_offset1)
+			{
+			  fprintf (stderr, "%s:%d removed_by_old_offset != removed_by_old_offset1: %d/%d\n",
+				   __func__, __LINE__, removed_by_old_offset, removed_by_old_offset1);
+			  abort();
+			}
+#endif
 
 		      /* If it is not unreachable and we have not yet
 			 seen an unreachable at this address, place it
@@ -10451,6 +10517,17 @@ relax_property_section (bfd *abfd,
 		    removed_by_actions_map (&target_relax_info->action_list,
 					    old_offset + old_size, TRUE);
 		  new_size -= removed_by_old_offset_size - removed_by_old_offset;
+#if CHECK_OPT & 2
+		  removed_by_old_offset1 = removed_by_actions (&act, old_offset + old_size, TRUE);
+		  if (removed_by_old_offset_size - removed_by_old_offset != removed_by_old_offset1)
+		    {
+		      fprintf (stderr, "%s:%d removed_by_old_offset_size - removed_by_old_offset != removed_by_old_offset1: %d/%d\n",
+			       __func__, __LINE__,
+			       removed_by_old_offset_size - removed_by_old_offset,
+			       removed_by_old_offset1);
+		      abort();
+		    }
+#endif
 		}
 
 	      if (new_size != old_size)
@@ -10712,13 +10789,37 @@ relax_section_symbols (bfd *abfd, asection *sec)
 	  bfd_vma orig_addr = isym->st_value;
 	  int removed = removed_by_actions_map (&relax_info->action_list,
 						orig_addr, FALSE);
+#if CHECK_OPT & 2
+	  text_action *act = relax_info->action_list.head;
+	  int removed1 = removed_by_actions (&act, orig_addr, FALSE);
+
+	  if (removed != removed1)
+	    {
+	      fprintf (stderr, "%s:%d removed != removed1, %d/%d\n",
+		       __func__, __LINE__, removed, removed1);
+	      abort ();
+	    }
+#endif
 
 	  isym->st_value -= removed;
 	  if (ELF32_ST_TYPE (isym->st_info) == STT_FUNC)
-	    isym->st_size -=
-	      removed_by_actions_map (&relax_info->action_list,
-				      orig_addr + isym->st_size, FALSE) -
-	      removed;
+	    {
+	      removed =
+		removed_by_actions_map (&relax_info->action_list,
+					orig_addr + isym->st_size, FALSE) -
+		removed;
+#if CHECK_OPT & 2
+	      removed1 = removed_by_actions (&act, orig_addr + isym->st_size, FALSE);
+
+	      if (removed != removed1)
+		{
+		  fprintf (stderr, "%s:%d removed != removed1, %d/%d\n",
+			   __func__, __LINE__, removed, removed1);
+		  abort ();
+		}
+#endif
+	      isym->st_size -= removed;
+	    }
 	}
     }
 
@@ -10739,14 +10840,38 @@ relax_section_symbols (bfd *abfd, asection *sec)
 	  bfd_vma orig_addr = sym_hash->root.u.def.value;
 	  int removed = removed_by_actions_map (&relax_info->action_list,
 						orig_addr, FALSE);
+#if CHECK_OPT & 2
+	  text_action *act = relax_info->action_list.head;
+	  int removed1 = removed_by_actions (&act, orig_addr, FALSE);
+
+	  if (removed != removed1)
+	    {
+	      fprintf (stderr, "%s:%d removed != removed1, %d/%d\n",
+		       __func__, __LINE__, removed, removed1);
+	      abort ();
+	    }
+#endif
 
 	  sym_hash->root.u.def.value -= removed;
 
 	  if (sym_hash->type == STT_FUNC)
-	    sym_hash->size -=
-	      removed_by_actions_map (&relax_info->action_list,
-				      orig_addr + sym_hash->size, FALSE) -
-	      removed;
+	    {
+	      removed =
+		removed_by_actions_map (&relax_info->action_list,
+					orig_addr + sym_hash->size, FALSE) -
+		removed;
+#if CHECK_OPT & 2
+	      removed1 = removed_by_actions (&act, orig_addr + sym_hash->size, FALSE);
+
+	      if (removed != removed1)
+		{
+		  fprintf (stderr, "%s:%d removed != removed1, %d/%d\n",
+			   __func__, __LINE__, removed, removed1);
+		  abort ();
+		}
+#endif
+	      sym_hash->size -= removed;
+	    }
 	}
     }
 
