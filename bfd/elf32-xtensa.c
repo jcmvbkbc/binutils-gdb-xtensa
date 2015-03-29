@@ -7411,9 +7411,9 @@ find_associated_l32r_irel (bfd *abfd,
     {
       Elf_Internal_Rela *irel = &internal_relocs[i];
 
-      if (irel == other_irel)
-	continue;
       if (irel->r_offset != other_irel->r_offset)
+	continue;
+      if (irel == other_irel)
 	continue;
       if (is_l32r_relocation (abfd, sec, contents, irel))
 	return irel;
