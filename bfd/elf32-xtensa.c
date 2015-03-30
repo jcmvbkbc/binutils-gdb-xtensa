@@ -7637,6 +7637,9 @@ static void reloc_range_list_update_range (reloc_range_list *list,
       list->list_root.next = &list->list_root;
       list->list_root.prev = &list->list_root;
       fprintf (stderr, "%s: move backwards requested\n", __func__);
+#if CHECK_OPT & 1
+      abort ();
+#endif
     }
 
   for (; list->last < list->n_range &&
@@ -8602,6 +8605,16 @@ check_section_ebb_pcrels_fit (bfd *abfd,
   if (xmap)
     free_xlate_map (xmap);
 
+#if CHECK_OPT & 1
+  if (relevant_relocs &&
+      check_section_ebb_pcrels_fit (abfd, sec, contents, internal_relocs,
+				    NULL, constraint, reloc_opcodes) != ok)
+    {
+      fprintf (stderr, "%s:%d check_section_ebb_pcrels_fit != ok\n",
+	       __func__, __LINE__);
+      abort();
+    }
+#endif
   return ok;
 }
 
