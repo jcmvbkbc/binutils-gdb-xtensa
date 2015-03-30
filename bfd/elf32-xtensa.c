@@ -1,3 +1,5 @@
+#define CHECK_OPT 7
+
 /* Xtensa-specific support for 32-bit ELF.
    Copyright (C) 2003-2015 Free Software Foundation, Inc.
 
