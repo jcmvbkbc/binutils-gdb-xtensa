@@ -6002,6 +6002,19 @@ removed_literal_compare (const void *a, const void *b)
 /* Check if the list of removed literals contains an entry for the
    given address.  Return the entry if found.  */
 
+#if CHECK_OPT & 4
+static removed_literal *
+find_removed_literal_orig (removed_literal_list *removed_list, bfd_vma addr)
+{
+  removed_literal *r = removed_list->head;
+  while (r && r->from.target_offset < addr)
+    r = r->next;
+  if (r && r->from.target_offset == addr)
+    return r;
+  return NULL;
+}
+#endif
+
 static removed_literal *
 find_removed_literal (removed_literal_list *removed_list, bfd_vma addr)
 {
@@ -6019,6 +6032,13 @@ find_removed_literal (removed_literal_list *removed_list, bfd_vma addr)
 	--p;
       r = p->literal;
     }
+#if CHECK_OPT & 4
+  if (r != find_removed_literal_orig (removed_list, addr))
+    {
+      fprintf (stderr, "%s:%d r != find_removed_literal_orig\n", __func__, __LINE__);
+      abort ();
+    }
+#endif
   return r;
 }
 
