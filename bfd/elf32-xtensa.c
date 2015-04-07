@@ -5790,8 +5790,8 @@ offset_with_removed_text_map (text_action_list *action_list, bfd_vma offset)
 {
   int removed = removed_by_actions_map (action_list, offset, FALSE);
 #if CHECK_OPT & 2
-  text_action *r = action_list->head;
-  int removed1 = removed_by_actions (&r, offset, FALSE);
+  text_action *r = action_first (action_list);
+  int removed1 = removed_by_actions (action_list, &r, offset, FALSE);
   if (removed != removed1)
     {
       fprintf (stderr, "%s:%d removed!= removed1 %d/%d\n",
@@ -10077,9 +10077,11 @@ translate_reloc (const r_reloc *orig_rel, r_reloc *new_rel, asection *sec)
 	base_removed;
 
 #if CHECK_OPT & 2
-      text_action *act = relax_info->action_list.head;
-      int base_removed1 = removed_by_actions (&act, base_offset, FALSE);
-      int addend_removed1 = removed_by_actions (&act, target_offset, FALSE);
+      text_action *act = action_first (&relax_info->action_list);
+      int base_removed1 = removed_by_actions (&relax_info->action_list,
+					      &act, base_offset, FALSE);
+      int addend_removed1 = removed_by_actions (&relax_info->action_list,
+						&act, target_offset, FALSE);
 
       if (base_removed != base_removed1)
 	{
@@ -10107,9 +10109,11 @@ translate_reloc (const r_reloc *orig_rel, r_reloc *new_rel, asection *sec)
 	tgt_removed;
 
 #if CHECK_OPT & 2
-      text_action *act = relax_info->action_list.head;
-      int tgt_removed1 = removed_by_actions (&act, target_offset, FALSE);
-      int addend_removed1 = removed_by_actions (&act, base_offset, FALSE);
+      text_action *act = action_first (&relax_info->action_list);
+      int tgt_removed1 = removed_by_actions (&relax_info->action_list,
+					     &act, target_offset, FALSE);
+      int addend_removed1 = removed_by_actions (&relax_info->action_list,
+						&act, base_offset, FALSE);
 
       if (tgt_removed != tgt_removed1)
 	{
@@ -10450,8 +10454,9 @@ relax_property_section (bfd *abfd,
 		removed_by_actions_map (&target_relax_info->action_list,
 					old_offset, FALSE);
 #if CHECK_OPT & 2
-	      text_action *act = target_relax_info->action_list.head;
-	      int removed_by_old_offset1 = removed_by_actions (&act, old_offset, FALSE);
+	      text_action *act = action_first (&target_relax_info->action_list);
+	      int removed_by_old_offset1 = removed_by_actions (&target_relax_info->action_list,
+							       &act, old_offset, FALSE);
 	      if (removed_by_old_offset != removed_by_old_offset1)
 		{
 		  fprintf (stderr, "%s:%d removed_by_old_offset != removed_by_old_offset1: %d/%d\n",
@@ -10488,8 +10493,9 @@ relax_property_section (bfd *abfd,
 						old_offset, TRUE);
 		      new_offset = old_offset - removed_by_old_offset;
 #if CHECK_OPT & 2
-		      act = target_relax_info->action_list.head;
-		      removed_by_old_offset1 = removed_by_actions (&act, old_offset, TRUE);
+		      act = action_first (&target_relax_info->action_list);
+		      removed_by_old_offset1 = removed_by_actions (&target_relax_info->action_list,
+								   &act, old_offset, TRUE);
 		      if (removed_by_old_offset != removed_by_old_offset1)
 			{
 			  fprintf (stderr, "%s:%d removed_by_old_offset != removed_by_old_offset1: %d/%d\n",
@@ -10518,7 +10524,8 @@ relax_property_section (bfd *abfd,
 					    old_offset + old_size, TRUE);
 		  new_size -= removed_by_old_offset_size - removed_by_old_offset;
 #if CHECK_OPT & 2
-		  removed_by_old_offset1 = removed_by_actions (&act, old_offset + old_size, TRUE);
+		  removed_by_old_offset1 = removed_by_actions (&target_relax_info->action_list,
+							       &act, old_offset + old_size, TRUE);
 		  if (removed_by_old_offset_size - removed_by_old_offset != removed_by_old_offset1)
 		    {
 		      fprintf (stderr, "%s:%d removed_by_old_offset_size - removed_by_old_offset != removed_by_old_offset1: %d/%d\n",
@@ -10790,8 +10797,9 @@ relax_section_symbols (bfd *abfd, asection *sec)
 	  int removed = removed_by_actions_map (&relax_info->action_list,
 						orig_addr, FALSE);
 #if CHECK_OPT & 2
-	  text_action *act = relax_info->action_list.head;
-	  int removed1 = removed_by_actions (&act, orig_addr, FALSE);
+	  text_action *act = action_first (&relax_info->action_list);
+	  int removed1 = removed_by_actions (&relax_info->action_list,
+					     &act, orig_addr, FALSE);
 
 	  if (removed != removed1)
 	    {
@@ -10809,7 +10817,8 @@ relax_section_symbols (bfd *abfd, asection *sec)
 					orig_addr + isym->st_size, FALSE) -
 		removed;
 #if CHECK_OPT & 2
-	      removed1 = removed_by_actions (&act, orig_addr + isym->st_size, FALSE);
+	      removed1 = removed_by_actions (&relax_info->action_list,
+					     &act, orig_addr + isym->st_size, FALSE);
 
 	      if (removed != removed1)
 		{
@@ -10841,8 +10850,9 @@ relax_section_symbols (bfd *abfd, asection *sec)
 	  int removed = removed_by_actions_map (&relax_info->action_list,
 						orig_addr, FALSE);
 #if CHECK_OPT & 2
-	  text_action *act = relax_info->action_list.head;
-	  int removed1 = removed_by_actions (&act, orig_addr, FALSE);
+	  text_action *act = action_first (&relax_info->action_list);
+	  int removed1 = removed_by_actions (&relax_info->action_list,
+					     &act, orig_addr, FALSE);
 
 	  if (removed != removed1)
 	    {
@@ -10861,7 +10871,8 @@ relax_section_symbols (bfd *abfd, asection *sec)
 					orig_addr + sym_hash->size, FALSE) -
 		removed;
 #if CHECK_OPT & 2
-	      removed1 = removed_by_actions (&act, orig_addr + sym_hash->size, FALSE);
+	      removed1 = removed_by_actions (&relax_info->action_list,
+					     &act, orig_addr + sym_hash->size, FALSE);
 
 	      if (removed != removed1)
 		{
