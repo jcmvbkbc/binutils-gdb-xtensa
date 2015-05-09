@@ -8790,7 +8790,6 @@ struct cached_fixup
 {
   int addr;
   int target;
-  int delta;
   fixS *fixP;
 };
 
@@ -8804,6 +8803,60 @@ struct fixup_cache
   segT seg;
   fragS *first_frag;
 };
+
+typedef struct seg_stretch seg_stretchS;
+struct seg_stretch
+{
+  addressT addr;
+  long stretch;
+};
+
+typedef struct seg_stretch_map seg_stretch_mapS;
+struct seg_stretch_map
+{
+  seg_stretchS *map;
+  unsigned n_map;
+  unsigned n_max;
+  addressT max_addr;
+};
+
+static void xtensa_add_stretch (seg_stretch_mapS *map, addressT addr,
+				long stretch)
+{
+  if (addr < map->max_addr)
+    map->n_map = 0;
+  map->max_addr = addr;
+  if (map->n_map && map->map[map->n_map - 1].stretch == stretch)
+    return;
+  if (map->n_map == map->n_max)
+    {
+      map->n_max = (map->n_max + 2) * 2;
+      map->map = xrealloc (map->map, map->n_max * sizeof (*map->map));
+      fprintf (stderr, "stretch map: %d\n", map->n_max);
+    }
+  map->map[map->n_map].addr = addr;
+  map->map[map->n_map].stretch = stretch;
+  ++map->n_map;
+}
+
+static int xtensa_stretch_addr (seg_stretch_mapS *map, addressT addr)
+{
+  unsigned a = 0;
+  unsigned b = map->n_map;
+
+  while (b - a > 1)
+    {
+      unsigned c = (a + b) / 2;
+
+      if (map->map[c].addr < addr)
+	a = c;
+      else
+	b = c;
+    }
+  if (map->map[a].addr < addr)
+    addr += map->map[a].stretch;
+  return addr;
+}
 
 static int fixup_order (const void *a, const void *b)
 {
@@ -8856,7 +8909,6 @@ static bfd_boolean xtensa_make_cached_fixup (cached_fixupS *o, fixS *fixP)
 
   o->addr = addr;
   o->target = target;
-  o->delta = delta;
   o->fixP = fixP;
 
   return TRUE;
@@ -8949,11 +9001,13 @@ xtensa_relax_frag (fragS *fragP, long stretch, int *stretched_p)
   static xtensa_insnbuf vbuf = NULL;
   int slot, num_slots;
   xtensa_format fmt;
+  static seg_stretch_mapS stretch_map;
 
   as_where (&file_name, &line);
   new_logical_line (fragP->fr_file, fragP->fr_line);
 
   fragP->tc_frag_data.unreported_expansion = 0;
+  xtensa_add_stretch (&stretch_map, fragP->fr_address - stretch, stretch);
 
   switch (fragP->fr_subtype)
     {
@@ -9065,9 +9119,11 @@ xtensa_relax_frag (fragS *fragP, long stretch, int *stretched_p)
 
             {
 	      fixS *fixP = fixup_cache.fixups[i].fixP;
-	      int target = fixup_cache.fixups[i].target;
-	      int addr = fixup_cache.fixups[i].addr;
-	      int delta = fixup_cache.fixups[i].delta + stretch;
+	      int target = xtensa_stretch_addr (&stretch_map,
+						fixup_cache.fixups[i].target);
+	      int addr = xtensa_stretch_addr (&stretch_map,
+					      fixup_cache.fixups[i].addr);
+	      int delta = target - addr;
 
 	      trampaddr = fragP->fr_address + fragP->fr_fix;
 
