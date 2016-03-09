@@ -218,6 +218,18 @@ struct linux_target_ops the_low_target = {
   NULL,
   0,
   xtensa_breakpoint_at,
+  xtensa_supports_z_point_type,
+  xtensa_insert_point,
+  xtensa_remove_point,
+  xtensa_stopped_by_watchpoint,
+  xtensa_stopped_data_address,
+  NULL, /* collect_ptrace_register */
+  NULL, /* supply_ptrace_register */
+  NULL, /* siginfo_fixup */
+  xtensa_new_process,
+  xtensa_new_thread,
+  xtensa_new_fork,
+  xtensa_prepare_to_resume,
 };
 
 
