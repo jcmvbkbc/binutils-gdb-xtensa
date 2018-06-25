@@ -894,8 +894,15 @@ xtensa_read_table_entries (bfd *abfd,
 	    continue;
 
 	  sym_off = get_elf_r_symndx_offset (abfd, r_symndx);
-	  BFD_ASSERT (sym_off == 0);
-	  address += (section_addr + sym_off + irel->r_addend);
+	  if ((bfd_get_file_flags (abfd) & (EXEC_P | DYNAMIC)) != 0)
+	    {
+	      address = (section_addr + irel->r_addend);
+	    }
+	  else
+	    {
+	      BFD_ASSERT (sym_off == 0);
+	      address += (section_addr + irel->r_addend);
+	    }
 	}
       else
 	{
