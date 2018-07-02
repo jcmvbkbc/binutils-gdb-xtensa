@@ -2784,11 +2784,15 @@ elf_xtensa_relocate_section (bfd *output_bfd,
 			}
 		      unresolved_reloc = FALSE;
 		    }
-		  else
+		  else if (!is_weak_undef)
 		    {
 		      /* Generate a RELATIVE relocation.  */
 		      outrel.r_info = ELF32_R_INFO (0, R_XTENSA_RELATIVE);
 		      outrel.r_addend = 0;
+		    }
+		  else
+		    {
+		      memset (&outrel, 0, sizeof (outrel));
 		    }
 		}
 
