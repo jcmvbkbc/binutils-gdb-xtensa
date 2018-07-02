@@ -2976,6 +2976,14 @@ elf_xtensa_relocate_section (bfd *output_bfd,
 			       contents, rel->r_offset, is_weak_undef,
 			       &error_message);
 
+      if (r_symndx < symtab_hdr->sh_info)
+	{
+	  sym = local_syms + r_symndx;
+	  sym_type = ELF32_ST_TYPE (sym->st_info);
+	  sec = local_sections[r_symndx];
+	  rel->r_addend += relocation - sec->output_section->vma;
+	}
+
       if (r != bfd_reloc_ok && !warned)
 	{
 	  BFD_ASSERT (r == bfd_reloc_dangerous || r == bfd_reloc_other);
