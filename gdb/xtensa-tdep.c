@@ -41,7 +41,7 @@
 
 #include "xtensa-isa.h"
 #include "xtensa-tdep.h"
-#include "xtensa-config.h"
+#include "xtensa-dynconfig.h"
 #include <algorithm>
 
 
@@ -3152,9 +3152,24 @@ xtensa_derive_tdep (xtensa_gdbarch_tdep *tdep)
   tdep->max_register_virtual_size = max_size;
 }
 
-/* Module "constructor" function.  */
+static xtensa_gdbarch_tdep *xtensa_config_get_tdep (void)
+{
+  static xtensa_gdbarch_tdep *ptdep;
 
-extern xtensa_gdbarch_tdep xtensa_tdep;
+  if (!ptdep)
+    {
+      extern xtensa_register_t rmap[];
+      xtensa_register_t *regmap =
+	(xtensa_register_t *) xtensa_load_config ("rmap", rmap, NULL);
+      static xtensa_gdbarch_tdep tdep (regmap);
+
+      ptdep = &tdep;
+    }
+
+  return ptdep;
+}
+
+/* Module "constructor" function.  */
 
 static struct gdbarch *
 xtensa_gdbarch_init (struct gdbarch_info info, struct gdbarch_list *arches)
@@ -3169,7 +3184,7 @@ xtensa_gdbarch_init (struct gdbarch_info info, struct gdbarch_list *arches)
   /* We have to set the byte order before we call gdbarch_alloc.  */
   info.byte_order = XCHAL_HAVE_BE ? BFD_ENDIAN_BIG : BFD_ENDIAN_LITTLE;
 
-  xtensa_gdbarch_tdep *tdep = &xtensa_tdep;
+  xtensa_gdbarch_tdep *tdep = xtensa_config_get_tdep ();
   gdbarch = gdbarch_alloc (&info, tdep);
   xtensa_derive_tdep (tdep);
 

@@ -22,7 +22,7 @@
 
 #include "arch/xtensa.h"
 #include "gdbarch.h"
-#include "xtensa-config.h"
+#include "xtensa-dynconfig.h"
 
 /* XTENSA_TDEP_VERSION can/should be changed along with XTENSA_CONFIG_VERSION
    whenever the "tdep" structure changes in an incompatible way.  */
