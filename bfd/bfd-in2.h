@@ -6246,6 +6246,25 @@ enum bfd_reloc_code_real
      relocation.  */
   BFD_RELOC_XTENSA_PLT,
 
+  /* Xtensa relocation used in ELF object files for symbols that may require
+     GOT entries.  Otherwise, this is just a generic 32-bit relocation.  */
+  BFD_RELOC_XTENSA_GOT,
+
+  /* Xtensa relocation for offset relative to _GLOBAL_OFFSET_TABLE_.  */
+  BFD_RELOC_XTENSA_GOTOFF,
+
+  /* TBD  */
+  BFD_RELOC_XTENSA_GOTFUNCDESC,
+
+  /* TBD  */
+  BFD_RELOC_XTENSA_GOTOFFFUNCDESC,
+
+  /* TBD  */
+  BFD_RELOC_XTENSA_FUNCDESC,
+
+  /* TBD  */
+  BFD_RELOC_XTENSA_FUNCDESC_VALUE,
+
   /* Xtensa relocations for backward compatibility.  These have been
      replaced by BFD_RELOC_XTENSA_PDIFF and BFD_RELOC_XTENSA_NDIFF.
      Xtensa relocations to mark the difference of two local symbols.
@@ -6316,11 +6335,18 @@ enum bfd_reloc_code_real
   /* Xtensa TLS relocations.  */
   BFD_RELOC_XTENSA_TLSDESC_FN,
   BFD_RELOC_XTENSA_TLSDESC_ARG,
+  BFD_RELOC_XTENSA_GOTTLSDESC,
+  BFD_RELOC_XTENSA_TLSDESC,
   BFD_RELOC_XTENSA_TLS_DTPOFF,
   BFD_RELOC_XTENSA_TLS_TPOFF,
+  BFD_RELOC_XTENSA_TLS_GOTTPOFF,
+  BFD_RELOC_XTENSA_TLS_FUNCDESC,
+  BFD_RELOC_XTENSA_TLS_GOT,
   BFD_RELOC_XTENSA_TLS_FUNC,
   BFD_RELOC_XTENSA_TLS_ARG,
   BFD_RELOC_XTENSA_TLS_CALL,
+  BFD_RELOC_XTENSA_TLS_TPOFF_PTR,
+  BFD_RELOC_XTENSA_TLS_TPOFF_LOAD,
 
   /* Xtensa relocations to mark the difference of two local symbols.
      These are only needed to support linker relaxation and can be
