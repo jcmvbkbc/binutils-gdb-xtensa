@@ -275,6 +275,7 @@ ALL_EMULATION_SOURCES = \
 	eelf32visium.c \
 	eelf32xstormy16.c \
 	eelf32xtensa.c \
+	eelf32xtensa_fdpic.c \
 	eelf32z80.c \
 	eelf_i386.c \
 	eelf_i386_be.c \
