@@ -3492,6 +3492,9 @@ elf_xtensa_print_private_bfd_data (bfd *abfd, void *farg)
   fprintf (f, "Literal tables = %s\n",
 	   (e_flags & EF_XTENSA_XT_LIT) ? "true" : "false");
 
+  if (elf_elfheader (abfd)->e_ident[EI_OSABI] == ELFOSABI_XTENSA_FDPIC)
+    fprintf (f, "FDPIC ABI supplement\n");
+
   return _bfd_elf_print_private_bfd_data (abfd, farg);
 }
 
