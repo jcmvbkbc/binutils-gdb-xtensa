@@ -186,17 +186,6 @@ if test -z "${NO_SMALL_DATA}"; then
 else
   NO_SMALL_DATA=" "
 fi
-if test -z "${DATA_GOT}"; then
-  if test -n "${NO_SMALL_DATA}"; then
-    DATA_GOT=" "
-  fi
-fi
-if test -z "${SDATA_GOT}"; then
-  if test -z "${NO_SMALL_DATA}"; then
-    SDATA_GOT=" "
-  fi
-fi
-test -n "$SEPARATE_GOTPLT" && SEPARATE_GOTPLT=" "
 test "${LARGE_SECTIONS}" = "yes" && REL_LARGE="
   .rel.ldata    ${RELOCATING-0} : { *(.rel.ldata${RELOCATING+ .rel.ldata.* .rel.gnu.linkonce.l.*}) }
   .rela.ldata   ${RELOCATING-0} : { *(.rela.ldata${RELOCATING+ .rela.ldata.* .rela.gnu.linkonce.l.*}) }
@@ -410,7 +399,7 @@ cat <<EOF
   ${TINY_READONLY_SECTION}
   .text         ${RELOCATING-0} :
   {
-    ${RELOCATING+*(.got.plt* .plt*)}
+    ${DATA_GOT-${RELOCATING+*(.got.plt* .plt*)}}
 
     ${RELOCATING+${INIT_START}}
     ${RELOCATING+KEEP (*(.init.literal))}
@@ -455,7 +444,11 @@ cat <<EOF
   .gcc_except_table ${RELOCATING-0} : ONLY_IF_RW { *(.gcc_except_table${RELOCATING+ .gcc_except_table.*}) }
 
   /* Thread Local Storage sections  */
-  .tdata	${RELOCATING-0} : { *(.tdata${RELOCATING+ .tdata.* .gnu.linkonce.td.*}) }
+  .tdata	${RELOCATING-0} :
+   {
+     ${RELOCATING+${CREATE_SHLIB-PROVIDE_HIDDEN (${USER_LABEL_PREFIX}__tdata_start = .);}}
+     *(.tdata${RELOCATING+ .tdata.* .gnu.linkonce.td.*})
+   }
   .tbss		${RELOCATING-0} : { *(.tbss${RELOCATING+ .tbss.* .gnu.linkonce.tb.*})${RELOCATING+ *(.tcommon)} }
 
   .preinit_array   ${RELOCATING-0} :
