@@ -6384,6 +6384,31 @@ ENUMDOC
   Xtensa relocation used in ELF object files for symbols that may require
   PLT entries.  Otherwise, this is just a generic 32-bit relocation.
 ENUM
+  BFD_RELOC_XTENSA_GOT
+ENUMDOC
+  Xtensa relocation used in ELF object files for symbols that may require
+  GOT entries.  Otherwise, this is just a generic 32-bit relocation.
+ENUM
+  BFD_RELOC_XTENSA_GOTOFF
+ENUMDOC
+  Xtensa relocation for offset relative to _GLOBAL_OFFSET_TABLE_.
+ENUM
+  BFD_RELOC_XTENSA_GOTFUNCDESC
+ENUMDOC
+  TBD
+ENUM
+  BFD_RELOC_XTENSA_GOTOFFFUNCDESC
+ENUMDOC
+  TBD
+ENUM
+  BFD_RELOC_XTENSA_FUNCDESC
+ENUMDOC
+  TBD
+ENUM
+  BFD_RELOC_XTENSA_FUNCDESC_VALUE
+ENUMDOC
+  TBD
+ENUM
   BFD_RELOC_XTENSA_DIFF8
 ENUMX
   BFD_RELOC_XTENSA_DIFF16

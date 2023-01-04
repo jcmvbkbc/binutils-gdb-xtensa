@@ -5147,6 +5147,25 @@ to one of its own internal functions or data structures.  */
 PLT entries.  Otherwise, this is just a generic 32-bit relocation.  */
   BFD_RELOC_XTENSA_PLT,
 
+/* Xtensa relocation used in ELF object files for symbols that may require
+GOT entries.  Otherwise, this is just a generic 32-bit relocation.  */
+  BFD_RELOC_XTENSA_GOT,
+
+/* Xtensa relocation for offset relative to _GLOBAL_OFFSET_TABLE_.  */
+  BFD_RELOC_XTENSA_GOTOFF,
+
+/* TBD */
+  BFD_RELOC_XTENSA_GOTFUNCDESC,
+
+/* TBD */
+  BFD_RELOC_XTENSA_GOTOFFFUNCDESC,
+
+/* TBD */
+  BFD_RELOC_XTENSA_FUNCDESC,
+
+/* TBD */
+  BFD_RELOC_XTENSA_FUNCDESC_VALUE,
+
 /* Xtensa relocations for backward compatibility.  These have been replaced
 by BFD_RELOC_XTENSA_PDIFF and BFD_RELOC_XTENSA_NDIFF.
 Xtensa relocations to mark the difference of two local symbols.

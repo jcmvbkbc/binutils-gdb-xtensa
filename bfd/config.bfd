@@ -1457,7 +1457,7 @@ case "${targ}" in
 
   xtensa*-*-*)
     targ_defvec=xtensa_elf32_le_vec
-    targ_selvecs=xtensa_elf32_be_vec
+    targ_selvecs="xtensa_elf32_fdpic_le_vec xtensa_elf32_be_vec xtensa_elf32_fdpic_be_vec"
     ;;
 
   z80-*-coff)

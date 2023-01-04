@@ -347,6 +347,25 @@ static reloc_howto_type elf_howto_table[] =
 	 bfd_elf_xtensa_reloc, "R_XTENSA_NDIFF16", false, 0, 0xffff, false),
   HOWTO (R_XTENSA_NDIFF32, 0, 4, 32, false, 0, complain_overflow_bitfield,
 	 bfd_elf_xtensa_reloc, "R_XTENSA_NDIFF32", false, 0, 0xffffffff, false),
+
+  HOWTO (R_XTENSA_GOT, 0, 4, 32, false, 0, complain_overflow_bitfield,
+	 bfd_elf_xtensa_reloc, "R_XTENSA_GOT",
+	 false, 0, 0xffffffff, false),
+  HOWTO (R_XTENSA_GOTOFF, 0, 4, 32, false, 0, complain_overflow_bitfield,
+	 bfd_elf_xtensa_reloc, "R_XTENSA_GOTOFF",
+	 false, 0, 0xffffffff, false),
+  HOWTO (R_XTENSA_GOTFUNCDESC, 0, 4, 32, false, 0, complain_overflow_bitfield,
+	 bfd_elf_xtensa_reloc, "R_XTENSA_GOTFUNCDESC",
+	 false, 0, 0xffffffff, false),
+  HOWTO (R_XTENSA_GOTOFFFUNCDESC, 0, 4, 32, false, 0, complain_overflow_bitfield,
+	 bfd_elf_xtensa_reloc, "R_XTENSA_GOTOFFFUNCDESC",
+	 false, 0, 0xffffffff, false),
+  HOWTO (R_XTENSA_FUNCDESC, 0, 4, 32, false, 0, complain_overflow_bitfield,
+	 bfd_elf_xtensa_reloc, "R_XTENSA_FUNCDESC",
+	 false, 0, 0xffffffff, false),
+  HOWTO (R_XTENSA_FUNCDESC_VALUE, 0, 4, 32, false, 0, complain_overflow_bitfield,
+	 bfd_elf_xtensa_reloc, "R_XTENSA_FUNCDESC_VALUE",
+	 false, 0, 0xffffffff, false),
 };
 
 #if DEBUG_GEN_RELOC
@@ -485,6 +504,30 @@ elf_xtensa_reloc_type_lookup (bfd *abfd ATTRIBUTE_UNUSED,
     case BFD_RELOC_XTENSA_TLS_CALL:
       TRACE ("BFD_RELOC_XTENSA_TLS_CALL");
       return &elf_howto_table[(unsigned) R_XTENSA_TLS_CALL ];
+
+    case BFD_RELOC_XTENSA_GOT:
+      TRACE ("BFD_RELOC_XTENSA_GOT");
+      return &elf_howto_table[(unsigned) R_XTENSA_GOT ];
+
+    case BFD_RELOC_XTENSA_GOTOFF:
+      TRACE ("BFD_RELOC_XTENSA_GOTOFF");
+      return &elf_howto_table[(unsigned) R_XTENSA_GOTOFF ];
+
+    case BFD_RELOC_XTENSA_GOTFUNCDESC:
+      TRACE ("BFD_RELOC_XTENSA_GOTFUNCDESC");
+      return &elf_howto_table[(unsigned) R_XTENSA_GOTFUNCDESC ];
+
+    case BFD_RELOC_XTENSA_GOTOFFFUNCDESC:
+      TRACE ("BFD_RELOC_XTENSA_GOTOFFFUNCDESC");
+      return &elf_howto_table[(unsigned) R_XTENSA_GOTOFFFUNCDESC ];
+
+    case BFD_RELOC_XTENSA_FUNCDESC:
+      TRACE ("BFD_RELOC_XTENSA_FUNCDESC");
+      return &elf_howto_table[(unsigned) R_XTENSA_FUNCDESC ];
+
+    case BFD_RELOC_XTENSA_FUNCDESC_VALUE:
+      TRACE ("BFD_RELOC_XTENSA_FUNCDESC_VALUE");
+      return &elf_howto_table[(unsigned) R_XTENSA_FUNCDESC_VALUE ];
 
     default:
       if (code >= BFD_RELOC_XTENSA_SLOT0_OP
@@ -688,6 +731,9 @@ struct elf_xtensa_link_hash_table
   int plt_reloc_count;
 
   struct elf_xtensa_link_hash_entry *tlsbase;
+
+  /* True if the target system uses FDPIC. */
+  int fdpic_p;
 };
 
 /* Get the Xtensa ELF linker hash table from a link_info structure.  */
@@ -760,6 +806,23 @@ elf_xtensa_link_hash_table_create (bfd *abfd)
   ret->tlsbase->tls_type = GOT_UNKNOWN;
 
   return &ret->elf.root;
+}
+
+/* Create an Xtensa ELF linker hash table for FDPIC.  */
+
+static struct bfd_link_hash_table *
+elf_xtensa_fdpic_link_hash_table_create (bfd *abfd)
+{
+  struct bfd_link_hash_table *ret;
+
+  ret = elf_xtensa_link_hash_table_create (abfd);
+  if (ret)
+    {
+      struct elf_xtensa_link_hash_table *htab = (struct elf_xtensa_link_hash_table *) ret;
+
+      htab->fdpic_p = 1;
+    }
+  return ret;
 }
 
 /* Copy the extra info we tack onto an elf_link_hash_entry.  */
@@ -1949,6 +2012,11 @@ elf_xtensa_do_reloc (reloc_howto_type *howto,
       return bfd_reloc_ok;
 
     case R_XTENSA_PLT:
+    case R_XTENSA_GOT:
+    case R_XTENSA_GOTOFF:
+    case R_XTENSA_GOTFUNCDESC:
+    case R_XTENSA_GOTOFFFUNCDESC:
+    case R_XTENSA_FUNCDESC:
     case R_XTENSA_TLSDESC_FN:
     case R_XTENSA_TLSDESC_ARG:
     case R_XTENSA_TLS_DTPOFF:
@@ -11553,5 +11621,29 @@ static const struct bfd_elf_special_section elf_xtensa_special_sections[] =
 #define elf_backend_special_sections	     elf_xtensa_special_sections
 #define elf_backend_action_discarded	     elf_xtensa_action_discarded
 #define elf_backend_copy_indirect_symbol     elf_xtensa_copy_indirect_symbol
+
+#include "elf32-target.h"
+
+/* FDPIC Targets.  */
+
+#undef  elf32_bed
+#define elf32_bed			elf32_xtensa_fdpic_bed
+
+#undef  TARGET_LITTLE_SYM
+#define TARGET_LITTLE_SYM		xtensa_elf32_fdpic_le_vec
+#undef  TARGET_LITTLE_NAME
+#define TARGET_LITTLE_NAME		"elf32-xtensa-le-fdpic"
+#undef  TARGET_BIG_SYM
+#define TARGET_BIG_SYM			xtensa_elf32_fdpic_be_vec
+#undef  TARGET_BIG_NAME
+#define TARGET_BIG_NAME			"elf32-xtensa-be-fdpic"
+
+#undef  elf_match_priority
+#define elf_match_priority		128
+#undef  ELF_OSABI
+#define ELF_OSABI			ELFOSABI_XTENSA_FDPIC
+
+#undef  bfd_elf32_bfd_link_hash_table_create
+#define bfd_elf32_bfd_link_hash_table_create elf_xtensa_fdpic_link_hash_table_create
 
 #include "elf32-target.h"
