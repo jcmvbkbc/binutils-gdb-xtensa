@@ -81,6 +81,7 @@
 #define ELFOSABI_C6000_LINUX 65 /* Linux TMS320C6000 */
 #define ELFOSABI_AMDGPU_PAL  65 /* AMD PAL Runtime */
 #define ELFOSABI_ARM_FDPIC   65 /* ARM FDPIC */
+#define ELFOSABI_XTENSA_FDPIC  65 /* Xtensa FDPIC */
 #define ELFOSABI_AMDGPU_MESA3D 66 /* AMD Mesa3D Runtime */
 #define ELFOSABI_ARM	     97	/* ARM */
 #define ELFOSABI_STANDALONE 255	/* Standalone (embedded) application */
