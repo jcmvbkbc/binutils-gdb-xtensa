@@ -4930,6 +4930,15 @@ get_osabi_name (Filedata * filedata, unsigned int osabi)
 	      }
 	    break;
 
+	  case EM_XTENSA:
+	    switch (osabi)
+	      {
+	      case ELFOSABI_XTENSA_FDPIC:	return "XTENSA FDPIC";
+	      default:
+		break;
+	      }
+	    break;
+
 	  default:
 	    break;
 	  }
