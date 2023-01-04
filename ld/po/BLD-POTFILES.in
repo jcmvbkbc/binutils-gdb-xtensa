@@ -165,6 +165,7 @@ eelf32vax.c
 eelf32visium.c
 eelf32xstormy16.c
 eelf32xtensa.c
+eelf32xtensa_fdpic.c
 eelf32z80.c
 eelf64_aix.c
 eelf64_ia64.c

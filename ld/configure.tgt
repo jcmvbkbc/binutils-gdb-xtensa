@@ -1065,6 +1065,10 @@ xgate-*-*)		targ_emul=xgateelf
 			;;
 xstormy16-*-*)		targ_emul=elf32xstormy16
 			;;
+xtensa*-*-*fdpic)	targ_emul=elf32xtensa_fdpic
+			targ_extra_emuls="elf32xtensa"
+			targ_extra_libpath=$targ_extra_emuls
+			;;
 xtensa*-*-*)		targ_emul=elf32xtensa
 			;;
 z80-*-elf*)		targ_emul=elf32z80
