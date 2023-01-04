@@ -37,6 +37,13 @@
 #define int32 signed int
 #endif
 
+#ifdef OBJ_FDPIC_ELF
+#define DEFAULT_FDPIC true
+#else
+#define DEFAULT_FDPIC false
+#endif
+
+
 /* Notes:
 
    Naming conventions (used somewhat inconsistently):
@@ -351,6 +358,11 @@ op_placement_info_table op_placement_table;
 #define O_tlscall	O_md7	/* TLS_CALL relocation */
 #define O_tpoff		O_md8	/* TPOFF relocation */
 #define O_dtpoff	O_md9	/* DTPOFF relocation */
+#define O_got		O_md10	/* GOT relocation */
+#define O_gotoff	O_md11	/* GOTOFF relocation */
+#define O_gotfuncdesc		O_md12	/* GOTFUNCDESC relocation */
+#define O_gotofffuncdesc	O_md13	/* GOTOFFFUNCDESC relocation */
+#define O_funcdesc		O_md14	/* FUNCDESC relocation */
 
 struct suffix_reloc_map
 {
@@ -373,6 +385,11 @@ static struct suffix_reloc_map suffix_relocs[] =
   SUFFIX_MAP ("tlscall", BFD_RELOC_XTENSA_TLS_CALL,	O_tlscall),
   SUFFIX_MAP ("tpoff",	BFD_RELOC_XTENSA_TLS_TPOFF,	O_tpoff),
   SUFFIX_MAP ("dtpoff",	BFD_RELOC_XTENSA_TLS_DTPOFF,	O_dtpoff),
+  SUFFIX_MAP ("got",	BFD_RELOC_XTENSA_GOT,		O_got),
+  SUFFIX_MAP ("gotoff",	BFD_RELOC_XTENSA_GOTOFF,	O_gotoff),
+  SUFFIX_MAP ("gotfuncdesc",	BFD_RELOC_XTENSA_GOTFUNCDESC,		O_gotfuncdesc),
+  SUFFIX_MAP ("gotofffuncdesc", BFD_RELOC_XTENSA_GOTOFFFUNCDESC,	O_gotofffuncdesc),
+  SUFFIX_MAP ("funcdesc",	BFD_RELOC_XTENSA_FUNCDESC,		O_funcdesc),
 };
 
 
@@ -626,6 +643,7 @@ static bool workaround_close_loop_end = false;
 static bool maybe_has_close_loop_end = false;
 static bool enforce_three_byte_loop_align = false;
 static bool opt_linkrelax = true;
+static bool xtensa_fdpic = DEFAULT_FDPIC;
 
 /* When workaround_short_loops is TRUE, all loops with early exits must
    have at least 3 instructions.  workaround_all_short_loops is a modifier
@@ -733,6 +751,9 @@ enum
 
   option_abi_windowed,
   option_abi_call0,
+
+  option_fdpic,
+  option_no_fdpic,
 };
 
 const char *md_shortopts = "";
@@ -816,6 +837,9 @@ struct option md_longopts[] =
 
   { "abi-windowed", no_argument, NULL, option_abi_windowed },
   { "abi-call0", no_argument, NULL, option_abi_call0 },
+
+  { "fdpic", no_argument, NULL, option_fdpic },
+  { "no-fdpic", no_argument, NULL, option_no_fdpic },
 
   { NULL, no_argument, NULL, 0 }
 };
@@ -1051,6 +1075,14 @@ md_parse_option (int c, const char *arg)
 
     case option_abi_call0:
       elf32xtensa_abi = XTHAL_ABI_CALL0;
+      return 1;
+
+    case option_fdpic:
+      xtensa_fdpic = true;
+      return 1;
+
+    case option_no_fdpic:
+      xtensa_fdpic = false;
       return 1;
 
     default:
@@ -3313,6 +3345,11 @@ xg_valid_literal_expression (const expressionS *exp)
     case O_uminus:
     case O_subtract:
     case O_pltrel:
+    case O_got:
+    case O_gotoff:
+    case O_gotfuncdesc:
+    case O_gotofffuncdesc:
+    case O_funcdesc:
     case O_pcrel:
     case O_tlsfunc:
     case O_tlsarg:
@@ -4245,6 +4282,11 @@ xg_assemble_literal (/* const */ TInsn *insn)
       pcrel = true;
       /* fall through */
     case O_pltrel:
+    case O_got:
+    case O_gotoff:
+    case O_gotfuncdesc:
+    case O_gotofffuncdesc:
+    case O_funcdesc:
     case O_tlsfunc:
     case O_tlsarg:
     case O_tpoff:
@@ -5232,7 +5274,10 @@ xg_apply_fix_value (fixS *fixP, valueT val)
 const char *
 xtensa_target_format (void)
 {
-  return (target_big_endian ? "elf32-xtensa-be" : "elf32-xtensa-le");
+  if (xtensa_fdpic)
+    return (target_big_endian ? "elf32-xtensa-be-fdpic" : "elf32-xtensa-le-fdpic");
+  else
+    return (target_big_endian ? "elf32-xtensa-be" : "elf32-xtensa-le");
 }
 
 
@@ -6051,6 +6096,15 @@ md_apply_fix (fixS *fixP, valueT *valP, segT seg)
       /* fall through */
 
     case BFD_RELOC_XTENSA_PLT:
+      md_number_to_chars (fixpos, val, fixP->fx_size);
+      fixP->fx_no_overflow = 0; /* Use the standard overflow check.  */
+      break;
+
+    case BFD_RELOC_XTENSA_GOT:
+    case BFD_RELOC_XTENSA_GOTOFF:
+    case BFD_RELOC_XTENSA_GOTFUNCDESC:
+    case BFD_RELOC_XTENSA_GOTOFFFUNCDESC:
+    case BFD_RELOC_XTENSA_FUNCDESC:
       md_number_to_chars (fixpos, val, fixP->fx_size);
       fixP->fx_no_overflow = 0; /* Use the standard overflow check.  */
       break;
@@ -7007,6 +7061,11 @@ emit_single_op (TInsn *orig_insn)
       && !cur_vinsn.inside_bundle
       && (orig_insn->tok[1].X_op == O_symbol
 	  || orig_insn->tok[1].X_op == O_pltrel
+	  || orig_insn->tok[1].X_op == O_got
+	  || orig_insn->tok[1].X_op == O_gotoff
+	  || orig_insn->tok[1].X_op == O_gotfuncdesc
+	  || orig_insn->tok[1].X_op == O_gotofffuncdesc
+	  || orig_insn->tok[1].X_op == O_funcdesc
 	  || orig_insn->tok[1].X_op == O_tlsfunc
 	  || orig_insn->tok[1].X_op == O_tlsarg
 	  || orig_insn->tok[1].X_op == O_tpoff

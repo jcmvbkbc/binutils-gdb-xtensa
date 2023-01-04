@@ -427,6 +427,7 @@ case ${generic_target} in
   
   xgate-*-*)    			fmt=elf ;;
 
+  xtensa*-*-*fdpic)			fmt=fdpicelf ;;
   xtensa*-*-*)				fmt=elf ;;
 
   z80-*-coff)				fmt=coff ;;
