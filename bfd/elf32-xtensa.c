@@ -2547,6 +2547,16 @@ replace_tls_insn (Elf_Internal_Rela *rel,
   return true;
 }
 
+static void
+elf_xtensa_add_dynreloc (bfd *output_bfd, asection *srel,
+			 const Elf_Internal_Rela *outrel)
+{
+  bfd_byte *loc;
+
+  loc = srel->contents + srel->reloc_count++ * sizeof (Elf32_External_Rela);
+  bfd_elf32_swap_reloca_out (output_bfd, outrel, loc);
+  BFD_ASSERT (sizeof (Elf32_External_Rela) * srel->reloc_count <= srel->size);
+}
 
 #define IS_XTENSA_TLS_RELOC(R_TYPE) \
   ((R_TYPE) == R_XTENSA_TLSDESC_FN \
@@ -2853,7 +2863,6 @@ elf_xtensa_relocate_section (bfd *output_bfd,
 	      && (dynamic_symbol || bfd_link_pic (info)))
 	    {
 	      Elf_Internal_Rela outrel;
-	      bfd_byte *loc;
 	      asection *srel;
 
 	      if (dynamic_symbol && r_type == R_XTENSA_PLT)
@@ -2924,11 +2933,7 @@ elf_xtensa_relocate_section (bfd *output_bfd,
 		    }
 		}
 
-	      loc = (srel->contents
-		     + srel->reloc_count++ * sizeof (Elf32_External_Rela));
-	      bfd_elf32_swap_reloca_out (output_bfd, &outrel, loc);
-	      BFD_ASSERT (sizeof (Elf32_External_Rela) * srel->reloc_count
-			  <= srel->size);
+	      elf_xtensa_add_dynreloc (output_bfd, srel, &outrel);
 	    }
 	  else if (r_type == R_XTENSA_ASM_EXPAND && dynamic_symbol)
 	    {
@@ -2989,7 +2994,6 @@ elf_xtensa_relocate_section (bfd *output_bfd,
 	    else
 	      {
 		Elf_Internal_Rela outrel;
-		bfd_byte *loc;
 		asection *srel = htab->elf.srelgot;
 		int indx;
 
@@ -3022,11 +3026,7 @@ elf_xtensa_relocate_section (bfd *output_bfd,
 		unresolved_reloc = false;
 
 		BFD_ASSERT (srel);
-		loc = (srel->contents
-		       + srel->reloc_count++ * sizeof (Elf32_External_Rela));
-		bfd_elf32_swap_reloca_out (output_bfd, &outrel, loc);
-		BFD_ASSERT (sizeof (Elf32_External_Rela) * srel->reloc_count
-			    <= srel->size);
+		elf_xtensa_add_dynreloc (output_bfd, srel, &outrel);
 	      }
 	  }
 	  break;
