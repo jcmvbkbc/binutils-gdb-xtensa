@@ -1105,6 +1105,33 @@ elf_xtensa_in_literal_pool (property_table_entry *lit_table,
 }
 
 
+static bool
+elf_xtensa_allocate_local_sym_info (bfd *abfd)
+{
+  if (elf_local_got_refcounts (abfd) == NULL)
+    {
+      bfd_size_type size = elf_tdata (abfd)->symtab_hdr.sh_info;
+      void *mem;
+
+      mem = bfd_zalloc (abfd, size * sizeof (bfd_signed_vma));
+      if (mem == NULL)
+	return false;
+      elf_local_got_refcounts (abfd) = (bfd_signed_vma *) mem;
+
+      mem = bfd_zalloc (abfd, size);
+      if (mem == NULL)
+	return false;
+      elf_xtensa_local_got_tls_type (abfd) = (char *) mem;
+
+      mem = bfd_zalloc (abfd, size * sizeof (bfd_signed_vma));
+      if (mem == NULL)
+	return false;
+      elf_xtensa_local_tlsfunc_refcounts (abfd)
+	= (bfd_signed_vma *) mem;
+    }
+  return true;
+}
+
 /* Look through the relocs for a section during the first phase, and
    calculate needed space in the dynamic reloc sections.  */
 
@@ -1274,28 +1301,8 @@ elf_xtensa_check_relocs (bfd *abfd,
 	}
       else
 	{
-	  /* Allocate storage the first time.  */
-	  if (elf_local_got_refcounts (abfd) == NULL)
-	    {
-	      bfd_size_type size = symtab_hdr->sh_info;
-	      void *mem;
-
-	      mem = bfd_zalloc (abfd, size * sizeof (bfd_signed_vma));
-	      if (mem == NULL)
-		return false;
-	      elf_local_got_refcounts (abfd) = (bfd_signed_vma *) mem;
-
-	      mem = bfd_zalloc (abfd, size);
-	      if (mem == NULL)
-		return false;
-	      elf_xtensa_local_got_tls_type (abfd) = (char *) mem;
-
-	      mem = bfd_zalloc (abfd, size * sizeof (bfd_signed_vma));
-	      if (mem == NULL)
-		return false;
-	      elf_xtensa_local_tlsfunc_refcounts (abfd)
-		= (bfd_signed_vma *) mem;
-	    }
+	  if (!elf_xtensa_allocate_local_sym_info (abfd))
+	    return false;
 
 	  /* This is a global offset table entry for a local symbol.  */
 	  if (is_got || is_plt)
