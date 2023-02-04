@@ -3234,31 +3234,16 @@ elf_xtensa_combine_prop_entries (bfd *output_bfd,
     }
   qsort (table, num, sizeof (property_table_entry), property_table_compare);
 
-  for (n = 0; n < num; n++)
+  for (m = -1, n = 0; n < num; n++)
     {
-      bool remove_entry = false;
-
       if (table[n].size == 0)
-	remove_entry = true;
-      else if (n > 0
-	       && (table[n-1].address + table[n-1].size == table[n].address))
-	{
-	  table[n-1].size += table[n].size;
-	  remove_entry = true;
-	}
-
-      if (remove_entry)
-	{
-	  for (m = n; m < num - 1; m++)
-	    {
-	      table[m].address = table[m+1].address;
-	      table[m].size = table[m+1].size;
-	    }
-
-	  n--;
-	  num--;
-	}
+	continue;
+      else if (m >= 0 && table[m].address + table[m].size == table[n].address)
+	table[m].size += table[n].size;
+      else if (++m != n)
+	table[m] = table[n];
     }
+  num = m + 1;
 
   /* Copy the data back to the raw contents.  */
   offset = 0;
