@@ -1235,6 +1235,29 @@ elf_xtensa_check_relocs (bfd *abfd,
 	}
       eh = elf_xtensa_hash_entry (h);
 
+      if (h)
+	{
+	  static const char * const typestr[] = {
+	      "bfd_link_hash_new",
+	      "bfd_link_hash_undefined",
+	      "bfd_link_hash_undefweak",
+	      "bfd_link_hash_defined",
+	      "bfd_link_hash_defweak",
+	      "bfd_link_hash_common",
+	      "bfd_link_hash_indirect",
+	      "bfd_link_hash_warning"
+	  };
+	  fprintf(stderr, "%s: h.r.r.string = %s, h.r.type = %d (%s), h.dynindx = %ld\n",
+		  __func__,
+		  h->root.root.string,
+		  h->root.type, typestr[h->root.type],
+		  h->dynindx);
+	}
+      else
+	{
+	  fprintf(stderr, "%s: h = NULL\n", __func__);
+	}
+
       switch (r_type)
 	{
 	case R_XTENSA_TLSDESC_FN:
@@ -1322,6 +1345,7 @@ elf_xtensa_check_relocs (bfd *abfd,
 	  continue;
 
 	case R_XTENSA_GOTFUNCDESC:
+	  fprintf(stderr, "%s: R_XTENSA_GOTFUNCDESC\n", __func__);
 	  if (h)
 	    {
 	      ++eh->fdpic_cnts.gotfuncdesc_cnt;
@@ -1333,6 +1357,7 @@ elf_xtensa_check_relocs (bfd *abfd,
 	  continue;
 
 	case R_XTENSA_GOTOFFFUNCDESC:
+	  fprintf(stderr, "%s: R_XTENSA_GOTOFFFUNCDESC\n", __func__);
 	  if (h)
 	    {
 	      ++eh->fdpic_cnts.gotofffuncdesc_cnt;
@@ -1350,6 +1375,7 @@ elf_xtensa_check_relocs (bfd *abfd,
 	  continue;
 
 	case R_XTENSA_FUNCDESC:
+	  fprintf(stderr, "%s: R_XTENSA_FUNCDESC\n", __func__);
 	  if (h)
 	    {
 	      ++eh->fdpic_cnts.funcdesc_cnt;
@@ -1878,6 +1904,7 @@ elf_xtensa_allocate_local_got_size (struct bfd_link_info *info)
 	    }
 	}
     }
+  fprintf(stderr, "%s: sgot->size = %ld\n", __func__, htab->elf.sgot->size);
 }
 
 
@@ -4010,6 +4037,8 @@ elf_xtensa_fdpic_finish_dynamic_sections (bfd *output_bfd,
   if (srelgot && srelgot->size != (sizeof (Elf32_External_Rela)
 				   * srelgot->reloc_count))
     {
+      fprintf (stderr, "%s: srelgot->size: %ld, srelgot->reloc_count: %d\n",
+	       __func__, srelgot->size, srelgot->reloc_count);
       abort ();
     }
 
