@@ -99,6 +99,7 @@ START_RELOC_NUMBERS (elf_xtensa_reloc_type)
      RELOC_NUMBER (R_XTENSA_GOTOFFFUNCDESC, 66)
      RELOC_NUMBER (R_XTENSA_FUNCDESC, 67)
      RELOC_NUMBER (R_XTENSA_FUNCDESC_VALUE, 68)
+     RELOC_NUMBER (R_XTENSA_GOT_TLS_TPOFF, 69)
 END_RELOC_NUMBERS (R_XTENSA_max)
 
 /* Processor-specific flags for the ELF header e_flags field.  */
