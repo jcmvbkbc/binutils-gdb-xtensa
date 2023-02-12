@@ -1866,10 +1866,22 @@ map_operator_to_reloc (unsigned char operator, bool is_literal)
 
   if (is_literal)
     {
-      if (reloc == BFD_RELOC_XTENSA_TLS_FUNC)
-	return BFD_RELOC_XTENSA_TLSDESC_FN;
-      else if (reloc == BFD_RELOC_XTENSA_TLS_ARG)
-	return BFD_RELOC_XTENSA_TLSDESC_ARG;
+#if 0
+      if (xtensa_fdpic)
+	{
+	  if (reloc == BFD_RELOC_XTENSA_TLS_FUNC)
+	    return BFD_RELOC_XTENSA_GOTTLSDESC_FN;
+	  else if (reloc == BFD_RELOC_XTENSA_TLS_ARG)
+	    return BFD_RELOC_XTENSA_GOTTLSDESC_ARG;
+	}
+      else
+#endif
+	{
+	  if (reloc == BFD_RELOC_XTENSA_TLS_FUNC)
+	    return BFD_RELOC_XTENSA_TLSDESC_FN;
+	  else if (reloc == BFD_RELOC_XTENSA_TLS_ARG)
+	    return BFD_RELOC_XTENSA_TLSDESC_ARG;
+	}
     }
 
   if (reloc == BFD_RELOC_UNUSED)

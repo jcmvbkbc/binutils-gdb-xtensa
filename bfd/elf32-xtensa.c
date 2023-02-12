@@ -1335,7 +1335,8 @@ elf_xtensa_check_relocs (bfd *abfd,
 	    }
 	  else
 	    {
-	      return false;
+	      fprintf (stderr, "%s: R_XTENSA_GOTFUNCDESC, !h\n", __func__);
+	      //return false;
 	    }
 	  continue;
 
@@ -12202,6 +12203,7 @@ static const struct bfd_elf_special_section elf_xtensa_special_sections[] =
 #define elf_backend_special_sections	     elf_xtensa_special_sections
 #define elf_backend_action_discarded	     elf_xtensa_action_discarded
 #define elf_backend_copy_indirect_symbol     elf_xtensa_copy_indirect_symbol
+#define elf_backend_relocs_compatible	     _bfd_elf_relocs_compatible
 
 #include "elf32-target.h"
 
