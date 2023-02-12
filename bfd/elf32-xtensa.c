@@ -366,6 +366,9 @@ static reloc_howto_type elf_howto_table[] =
   HOWTO (R_XTENSA_FUNCDESC_VALUE, 0, 4, 32, false, 0, complain_overflow_bitfield,
 	 bfd_elf_xtensa_reloc, "R_XTENSA_FUNCDESC_VALUE",
 	 false, 0, 0xffffffff, false),
+  HOWTO (R_XTENSA_GOT_TLS_TPOFF, 0, 4, 32, false, 0, complain_overflow_dont,
+	 bfd_elf_xtensa_reloc, "R_XTENSA_GOT_TLS_TPOFF",
+	 false, 0, 0xffffffff, false),
 };
 
 #if DEBUG_GEN_RELOC
@@ -492,6 +495,10 @@ elf_xtensa_reloc_type_lookup (bfd *abfd ATTRIBUTE_UNUSED,
     case BFD_RELOC_XTENSA_TLS_TPOFF:
       TRACE ("BFD_RELOC_XTENSA_TLS_TPOFF");
       return &elf_howto_table[(unsigned) R_XTENSA_TLS_TPOFF ];
+
+    case BFD_RELOC_XTENSA_GOT_TLS_TPOFF:
+      TRACE ("BFD_RELOC_XTENSA_GOT_TLS_TPOFF");
+      return &elf_howto_table[(unsigned) R_XTENSA_GOT_TLS_TPOFF ];
 
     case BFD_RELOC_XTENSA_TLS_FUNC:
       TRACE ("BFD_RELOC_XTENSA_TLS_FUNC");
