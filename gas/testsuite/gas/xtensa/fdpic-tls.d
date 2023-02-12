@@ -1,0 +1,9 @@
+#as: --fdpic
+#objdump: -p -r -j .literal
+#source: fdpic-tls.s
+
+#...
+FDPIC ABI supplement
+#...
+.* R_XTENSA_GOT_TLS_TPOFF *v0
+#...
