@@ -363,6 +363,7 @@ op_placement_info_table op_placement_table;
 #define O_gotfuncdesc		O_md12	/* GOTFUNCDESC relocation */
 #define O_gotofffuncdesc	O_md13	/* GOTOFFFUNCDESC relocation */
 #define O_funcdesc		O_md14	/* FUNCDESC relocation */
+#define O_gottpoff	O_md15	/* GOTTPOFF relocation */
 
 struct suffix_reloc_map
 {
@@ -390,6 +391,7 @@ static struct suffix_reloc_map suffix_relocs[] =
   SUFFIX_MAP ("gotfuncdesc",	BFD_RELOC_XTENSA_GOTFUNCDESC,		O_gotfuncdesc),
   SUFFIX_MAP ("gotofffuncdesc", BFD_RELOC_XTENSA_GOTOFFFUNCDESC,	O_gotofffuncdesc),
   SUFFIX_MAP ("funcdesc",	BFD_RELOC_XTENSA_FUNCDESC,		O_funcdesc),
+  SUFFIX_MAP ("gottpoff",	BFD_RELOC_XTENSA_GOT_TLS_TPOFF,		O_gottpoff),
 };
 
 
@@ -3350,6 +3352,7 @@ xg_valid_literal_expression (const expressionS *exp)
     case O_gotfuncdesc:
     case O_gotofffuncdesc:
     case O_funcdesc:
+    case O_gottpoff:
     case O_pcrel:
     case O_tlsfunc:
     case O_tlsarg:
@@ -4287,6 +4290,7 @@ xg_assemble_literal (/* const */ TInsn *insn)
     case O_gotfuncdesc:
     case O_gotofffuncdesc:
     case O_funcdesc:
+    case O_gottpoff:
     case O_tlsfunc:
     case O_tlsarg:
     case O_tpoff:
@@ -6112,6 +6116,7 @@ md_apply_fix (fixS *fixP, valueT *valP, segT seg)
     case BFD_RELOC_XTENSA_TLSDESC_FN:
     case BFD_RELOC_XTENSA_TLSDESC_ARG:
     case BFD_RELOC_XTENSA_TLS_TPOFF:
+    case BFD_RELOC_XTENSA_GOT_TLS_TPOFF:
     case BFD_RELOC_XTENSA_TLS_DTPOFF:
       S_SET_THREAD_LOCAL (fixP->fx_addsy);
       md_number_to_chars (fixpos, 0, fixP->fx_size);
@@ -7066,6 +7071,7 @@ emit_single_op (TInsn *orig_insn)
 	  || orig_insn->tok[1].X_op == O_gotfuncdesc
 	  || orig_insn->tok[1].X_op == O_gotofffuncdesc
 	  || orig_insn->tok[1].X_op == O_funcdesc
+	  || orig_insn->tok[1].X_op == O_gottpoff
 	  || orig_insn->tok[1].X_op == O_tlsfunc
 	  || orig_insn->tok[1].X_op == O_tlsarg
 	  || orig_insn->tok[1].X_op == O_tpoff
