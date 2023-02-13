@@ -1291,6 +1291,14 @@ elf_xtensa_check_relocs (bfd *abfd,
 	    is_got = true;
 	  break;
 
+	case R_XTENSA_GOT_TLS_TPOFF:
+	  tls_type = GOT_TLS_IE;
+	  if (bfd_link_pic (info))
+	    info->flags |= DF_STATIC_TLS;
+	  if (bfd_link_dll (info) || elf_xtensa_dynamic_symbol_p (h, info))
+	    got_cnt = true;
+	  break;
+
 	case R_XTENSA_32:
 	  tls_type = GOT_NORMAL;
 	  is_got = true;
@@ -2293,6 +2301,7 @@ elf_xtensa_do_reloc (reloc_howto_type *howto,
     case R_XTENSA_TLSDESC_ARG:
     case R_XTENSA_TLS_DTPOFF:
     case R_XTENSA_TLS_TPOFF:
+    case R_XTENSA_GOT_TLS_TPOFF:
       bfd_put_32 (abfd, relocation, contents + address);
       return bfd_reloc_ok;
     }
@@ -2875,6 +2884,7 @@ elf_xtensa_fill_funcdesc (bfd *output_bfd,
    || (R_TYPE) == R_XTENSA_TLSDESC_ARG \
    || (R_TYPE) == R_XTENSA_TLS_DTPOFF \
    || (R_TYPE) == R_XTENSA_TLS_TPOFF \
+   || (R_TYPE) == R_XTENSA_GOT_TLS_TPOFF \
    || (R_TYPE) == R_XTENSA_TLS_FUNC \
    || (R_TYPE) == R_XTENSA_TLS_ARG \
    || (R_TYPE) == R_XTENSA_TLS_CALL)
@@ -3261,6 +3271,17 @@ elf_xtensa_relocate_section (bfd *output_bfd,
 	    }
 	  break;
 
+	case R_XTENSA_GOT_TLS_TPOFF:
+	  /* Switch to LE model for local symbols in an executable.  */
+	  if (! bfd_link_dll (info) && ! dynamic_symbol)
+	    {
+	      relocation = tpoff (info, relocation);
+	      break;
+	    }
+	  if (! dynamic_symbol)
+	    rel->r_addend = -dtpoff_base (info);
+	  /* fall through */
+
 	case R_XTENSA_GOT:
 	    {
 	      struct elf_xtensa_link_hash_entry *eh;
@@ -3295,12 +3316,18 @@ elf_xtensa_relocate_section (bfd *output_bfd,
 		  outrel.r_offset = relocation + sgot->output_section->vma;
 		  if (dynamic_symbol)
 		    {
-		      outrel.r_info = ELF32_R_INFO (h->dynindx, R_XTENSA_GLOB_DAT);
+		      outrel.r_info = ELF32_R_INFO (h->dynindx,
+						    r_type == R_XTENSA_GOT
+						    ? R_XTENSA_GLOB_DAT
+						    : R_XTENSA_TLS_TPOFF);
 		      outrel.r_addend = rel->r_addend;
 		    }
 		  else
 		    {
-		      outrel.r_info = ELF32_R_INFO (0, R_XTENSA_RELATIVE);
+		      outrel.r_info = ELF32_R_INFO (0,
+						    r_type == R_XTENSA_GOT
+						    ? R_XTENSA_RELATIVE
+						    : R_XTENSA_TLS_TPOFF);
 		      outrel.r_addend = target;
 		      bfd_put_32 (output_bfd, outrel.r_addend,
 				  sgot->contents + *pgot);
