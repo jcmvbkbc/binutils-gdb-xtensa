@@ -1221,6 +1221,12 @@ elf_xtensa_check_relocs (bfd *abfd,
       bool is_got = false;
       bool is_plt = false;
       bool is_tlsfunc = false;
+      /* FDPIC-specific counters */
+      bool got_cnt = false;
+      bool gotfuncdesc_cnt = false;
+      bool gotofffuncdesc_cnt = false;
+      bool funcdesc_cnt = false;
+      bool dataref_cnt = false;
 
       r_symndx = ELF32_R_SYM (rel->r_info);
       r_type = ELF32_R_TYPE (rel->r_info);
@@ -1289,21 +1295,7 @@ elf_xtensa_check_relocs (bfd *abfd,
 	  tls_type = GOT_NORMAL;
 	  is_got = true;
 	  if (htab->fdpic_p && !(sec->flags & SEC_READONLY))
-	    {
-	      if (h)
-		{
-		  ++eh->fdpic_cnts.dataref_cnt;
-		}
-	      else
-		{
-		  struct xtensa_local_fdpic_cnts *lc;
-
-		  if (!elf_xtensa_allocate_local_sym_info (abfd))
-		    return false;
-		  lc = elf_xtensa_local_fdpic_cnts (abfd) + r_symndx;
-		  lc->dataref_cnt++;
-		}
-	    }
+	    dataref_cnt = 1;
 	  break;
 
 	case R_XTENSA_PLT:
@@ -1312,67 +1304,24 @@ elf_xtensa_check_relocs (bfd *abfd,
 	  break;
 
 	case R_XTENSA_GOT:
-	  if (h)
-	    {
-	      ++eh->fdpic_cnts.got_cnt;
-	    }
-	  else
-	    {
-	      struct xtensa_local_fdpic_cnts *lc;
-
-	      if (!elf_xtensa_allocate_local_sym_info (abfd))
-		return false;
-	      lc = elf_xtensa_local_fdpic_cnts (abfd) + r_symndx;
-	      lc->got_cnt++;
-	      lc->got_offset = (bfd_vma) -1;
-	    }
-	  continue;
+	  tls_type = GOT_NORMAL;
+	  got_cnt = true;
+	  break;
 
 	case R_XTENSA_GOTFUNCDESC:
-	  if (h)
-	    {
-	      ++eh->fdpic_cnts.gotfuncdesc_cnt;
-	    }
-	  else
-	    {
-	      fprintf (stderr, "%s: R_XTENSA_GOTFUNCDESC, !h\n", __func__);
-	      //return false;
-	    }
-	  continue;
+	  tls_type = GOT_NORMAL;
+	  gotfuncdesc_cnt = true;
+	  break;
 
 	case R_XTENSA_GOTOFFFUNCDESC:
-	  if (h)
-	    {
-	      ++eh->fdpic_cnts.gotofffuncdesc_cnt;
-	    }
-	  else
-	    {
-	      struct xtensa_local_fdpic_cnts *lc;
-
-	      if (!elf_xtensa_allocate_local_sym_info (abfd))
-		return false;
-	      lc = elf_xtensa_local_fdpic_cnts (abfd) + r_symndx;
-	      lc->gotofffuncdesc_cnt++;
-	      lc->funcdesc_offset = (bfd_vma) -1;
-	    }
-	  continue;
+	  tls_type = GOT_NORMAL;
+	  gotofffuncdesc_cnt = true;
+	  break;
 
 	case R_XTENSA_FUNCDESC:
-	  if (h)
-	    {
-	      ++eh->fdpic_cnts.funcdesc_cnt;
-	    }
-	  else
-	    {
-	      struct xtensa_local_fdpic_cnts *lc;
-
-	      if (!elf_xtensa_allocate_local_sym_info (abfd))
-		return false;
-	      lc = elf_xtensa_local_fdpic_cnts (abfd) + r_symndx;
-	      lc->funcdesc_cnt++;
-	      lc->funcdesc_offset = (bfd_vma) -1;
-	    }
-	  continue;
+	  tls_type = GOT_NORMAL;
+	  funcdesc_cnt = true;
+	  break;
 
 	case R_XTENSA_GNU_VTINHERIT:
 	  /* This relocation describes the C++ object vtable hierarchy.
@@ -1392,6 +1341,15 @@ elf_xtensa_check_relocs (bfd *abfd,
 	  /* Nothing to do for any other relocations.  */
 	  continue;
 	}
+
+      if (!htab->fdpic_p
+	  && (got_cnt
+	      || gotfuncdesc_cnt
+	      || gotofffuncdesc_cnt
+	      || funcdesc_cnt
+	      || dataref_cnt))
+	_bfd_error_handler
+	  (_("%pB: unexpected FDPIC-specific relocation"), abfd);
 
       if (h)
 	{
@@ -1424,6 +1382,20 @@ elf_xtensa_check_relocs (bfd *abfd,
 		h->got.refcount += 1;
 	    }
 
+	  if (htab->fdpic_p)
+	    {
+	      if (got_cnt)
+		++eh->fdpic_cnts.got_cnt;
+	      if (gotfuncdesc_cnt)
+		++eh->fdpic_cnts.gotfuncdesc_cnt;
+	      if (gotofffuncdesc_cnt)
+		++eh->fdpic_cnts.gotofffuncdesc_cnt;
+	      if (funcdesc_cnt)
+		++eh->fdpic_cnts.funcdesc_cnt;
+	      if (dataref_cnt)
+		++eh->fdpic_cnts.dataref_cnt;
+	    }
+
 	  if (is_tlsfunc)
 	    eh->tlsfunc_refcount += 1;
 
@@ -1437,6 +1409,26 @@ elf_xtensa_check_relocs (bfd *abfd,
 	  /* This is a global offset table entry for a local symbol.  */
 	  if (is_got || is_plt)
 	    elf_local_got_refcounts (abfd) [r_symndx] += 1;
+
+	  if (htab->fdpic_p)
+	    {
+	      struct xtensa_local_fdpic_cnts *lc =
+		elf_xtensa_local_fdpic_cnts (abfd) + r_symndx;
+
+	      if (got_cnt)
+		++lc->got_cnt;
+	      if (gotfuncdesc_cnt)
+		_bfd_error_handler
+		  (_("%pB: GOTFUNCDESC relocation for local symbol"), abfd);
+	      if (gotofffuncdesc_cnt)
+		++lc->gotofffuncdesc_cnt;
+	      if (funcdesc_cnt)
+		++lc->funcdesc_cnt;
+	      if (dataref_cnt)
+		++lc->dataref_cnt;
+	      lc->got_offset = (bfd_vma) -1;
+	      lc->funcdesc_offset = (bfd_vma) -1;
+	    }
 
 	  if (is_tlsfunc)
 	    elf_xtensa_local_tlsfunc_refcounts (abfd) [r_symndx] += 1;
