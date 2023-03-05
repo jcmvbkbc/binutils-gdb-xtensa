@@ -771,6 +771,9 @@ struct elf_xtensa_link_hash_table
 
   /* True if the target system uses FDPIC. */
   int fdpic_p;
+
+  /* Fixup section. Used for FDPIC.  */
+  asection *srofixup;
 };
 
 /* Get the Xtensa ELF linker hash table from a link_info structure.  */
@@ -1583,7 +1586,19 @@ elf_xtensa_create_dynamic_sections (bfd *dynobj, struct bfd_link_info *info)
       || !bfd_set_section_flags (htab->elf.sgotplt, flags))
     return false;
 
-  if (!htab->fdpic_p)
+  if (htab->fdpic_p)
+    {
+      htab->srofixup = bfd_make_section_with_flags (dynobj, ".rofixup",
+						    (SEC_ALLOC | SEC_LOAD
+						     | SEC_HAS_CONTENTS
+						     | SEC_IN_MEMORY
+						     | SEC_LINKER_CREATED
+						     | SEC_READONLY));
+      if (htab->srofixup == NULL
+	  || !bfd_set_section_alignment (htab->srofixup, 2))
+	return false;
+    }
+  else
     {
       /* Create ".got.loc" (literal tables for use by dynamic linker).  */
       htab->sgotloc = bfd_make_section_anyway_with_flags (dynobj, ".got.loc",
@@ -2014,6 +2029,11 @@ elf_xtensa_size_dynamic_sections (bfd *output_bfd ATTRIBUTE_UNUSED,
 	}
     }
 
+  /* At the very end of the .rofixup section is a pointer to the GOT,
+     reserve space for it. */
+  if (htab->fdpic_p && htab->srofixup != NULL)
+    htab->srofixup->size += 4;
+
   /* Allocate memory for dynamic sections.  */
   relplt = false;
   relgot = false;
@@ -2045,6 +2065,7 @@ elf_xtensa_size_dynamic_sections (bfd *output_bfd ATTRIBUTE_UNUSED,
       else if (! startswith (name, ".plt.")
 	       && ! startswith (name, ".got.plt.")
 	       && strcmp (name, ".got") != 0
+	       && strcmp (name, ".rofixup") != 0
 	       && strcmp (name, ".plt") != 0
 	       && strcmp (name, ".got.plt") != 0
 	       && strcmp (name, ".xt.lit.plt") != 0
@@ -2837,6 +2858,17 @@ elf_xtensa_add_dynreloc (bfd *output_bfd, asection *srel,
   loc = srel->contents + srel->reloc_count++ * sizeof (Elf32_External_Rela);
   bfd_elf32_swap_reloca_out (output_bfd, outrel, loc);
   BFD_ASSERT (sizeof (Elf32_External_Rela) * srel->reloc_count <= srel->size);
+}
+
+/* Add an FDPIC read-only fixup.  */
+static void
+elf_xtensa_add_rofixup (bfd *output_bfd, asection *srofixup, bfd_vma offset)
+{
+  bfd_vma fixup_offset;
+
+  fixup_offset = srofixup->reloc_count++ * 4;
+  BFD_ASSERT (fixup_offset < srofixup->size);
+  bfd_put_32 (output_bfd, offset, srofixup->contents + fixup_offset);
 }
 
 static void
@@ -4065,6 +4097,22 @@ elf_xtensa_fdpic_finish_dynamic_sections (bfd *output_bfd,
 	}
 
       bfd_elf32_swap_dyn_out (output_bfd, &dyn, dyncon);
+    }
+
+  /* At the very end of the .rofixup section is a pointer to the GOT.  */
+  if (htab->fdpic_p && htab->srofixup != NULL)
+    {
+      struct elf_link_hash_entry *hgot = htab->elf.hgot;
+
+      bfd_vma got_value = hgot->root.u.def.value
+	+ hgot->root.u.def.section->output_section->vma
+	+ hgot->root.u.def.section->output_offset;
+
+      elf_xtensa_add_rofixup (output_bfd, htab->srofixup,
+			      got_value);
+
+      BFD_ASSERT (htab->srofixup->reloc_count * 4
+		  == htab->srofixup->size);
     }
 
   return true;
