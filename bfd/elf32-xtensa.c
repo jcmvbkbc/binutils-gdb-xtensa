@@ -2899,10 +2899,12 @@ elf_xtensa_fill_funcdesc (bfd *output_bfd,
     {
       outrel.r_info = ELF32_R_INFO (0, R_XTENSA_RELATIVE);
       outrel.r_addend = target;
+      outrel.r_addend = 0;
       elf_xtensa_add_dynreloc (output_bfd, srel, &outrel);
       bfd_put_32 (output_bfd, target, sgot->contents + offset);
       outrel.r_offset += 4;
       outrel.r_addend = sgot->output_offset + sgot->output_section->vma;
+      outrel.r_addend = 0;
       elf_xtensa_add_dynreloc (output_bfd, srel, &outrel);
       bfd_put_32 (output_bfd,
 		  sgot->output_offset + sgot->output_section->vma,
@@ -3363,6 +3365,7 @@ elf_xtensa_relocate_section (bfd *output_bfd,
 		      outrel.r_addend = target;
 		      bfd_put_32 (output_bfd, outrel.r_addend,
 				  sgot->contents + *pgot);
+		      outrel.r_addend = 0; // only for GOT
 		    }
 
 		  elf_xtensa_add_dynreloc (output_bfd, srel, &outrel);
@@ -3421,6 +3424,7 @@ elf_xtensa_relocate_section (bfd *output_bfd,
 			  bfd_put_32 (output_bfd, outrel.r_addend,
 				      sgot->contents
 				      + eh->fdpic_cnts.gotfuncdesc_offset);
+			  outrel.r_addend = 0;
 			}
 
 		      elf_xtensa_add_dynreloc (output_bfd, srel, &outrel);
@@ -3517,6 +3521,7 @@ elf_xtensa_relocate_section (bfd *output_bfd,
 		{
 		  outrel.r_info = ELF32_R_INFO (0, R_XTENSA_RELATIVE);
 		  outrel.r_addend = relocation;
+		  outrel.r_addend = 0;
 		}
 
 	      elf_xtensa_add_dynreloc (output_bfd, srel, &outrel);
