@@ -6019,12 +6019,24 @@ xtensa_elf_section_change_hook (void)
 bool
 xtensa_fix_adjustable (fixS *fixP)
 {
-  /* We need the symbol name for the VTABLE entries.  */
-  if (fixP->fx_r_type == BFD_RELOC_VTABLE_INHERIT
-      || fixP->fx_r_type == BFD_RELOC_VTABLE_ENTRY)
-    return 0;
+  switch (fixP->fx_r_type)
+    {
+      /* We need the symbol name for the VTABLE entries.  */
+    case BFD_RELOC_VTABLE_INHERIT:
+    case BFD_RELOC_VTABLE_ENTRY:
+      return false;
 
-  return 1;
+      /* We need the symbol name for the FDPIC-specific relocations.  */
+    case BFD_RELOC_XTENSA_GOT:
+    case BFD_RELOC_XTENSA_GOTOFF:
+    case BFD_RELOC_XTENSA_GOTFUNCDESC:
+    case BFD_RELOC_XTENSA_GOTOFFFUNCDESC:
+    case BFD_RELOC_XTENSA_FUNCDESC:
+      return false;
+
+    default:
+      return true;
+    }
 }
 
 
