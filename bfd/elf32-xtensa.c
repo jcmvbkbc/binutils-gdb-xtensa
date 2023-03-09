@@ -1702,10 +1702,10 @@ elf_xtensa_allocate_funcdesc (struct bfd_link_info *info,
       s->size += 8;
       if (bfd_link_pic (info))
 	{
-	  if (eh->elf.dynindx == -1)
-	    htab->elf.srelgot->size += 2 * sizeof (Elf32_External_Rela);
-	  else
+	  if (elf_xtensa_dynamic_symbol_p (&eh->elf, info))
 	    htab->elf.srelgot->size += sizeof (Elf32_External_Rela);
+	  else
+	    htab->elf.srelgot->size += 2 * sizeof (Elf32_External_Rela);
 	}
       else
 	{
@@ -3425,7 +3425,8 @@ elf_xtensa_relocate_section (bfd *output_bfd,
 
 		      elf_xtensa_add_dynreloc (output_bfd, srel, &outrel);
 		      elf_xtensa_fill_funcdesc (output_bfd, info, pfuncdesc,
-						h->dynindx, target);
+						dynamic_symbol ? h->dynindx : -1,
+						target);
 		    }
 		  eh->fdpic_cnts.gotfuncdesc_offset |= 1;
 		}
@@ -3465,7 +3466,8 @@ elf_xtensa_relocate_section (bfd *output_bfd,
 
 	      relocation = (*pfuncdesc & ~1) + sgot->output_offset;
 	      elf_xtensa_fill_funcdesc (output_bfd, info, pfuncdesc,
-					dynindx, target);
+					dynamic_symbol ? dynindx : -1,
+					target);
 	      rel->r_addend = 0;
 	    }
 	  break;
@@ -3519,7 +3521,8 @@ elf_xtensa_relocate_section (bfd *output_bfd,
 
 	      elf_xtensa_add_dynreloc (output_bfd, srel, &outrel);
 	      elf_xtensa_fill_funcdesc (output_bfd, info, pfuncdesc,
-					dynindx, target);
+					dynamic_symbol ? dynindx : -1,
+					target);
 	      rel->r_addend = 0;
 	    }
 	  break;
