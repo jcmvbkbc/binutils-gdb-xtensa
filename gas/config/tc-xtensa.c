@@ -1866,22 +1866,12 @@ map_operator_to_reloc (unsigned char operator, bool is_literal)
 
   if (is_literal)
     {
-#if 0
-      if (xtensa_fdpic)
-	{
-	  if (reloc == BFD_RELOC_XTENSA_TLS_FUNC)
-	    return BFD_RELOC_XTENSA_GOTTLSDESC_FN;
-	  else if (reloc == BFD_RELOC_XTENSA_TLS_ARG)
-	    return BFD_RELOC_XTENSA_GOTTLSDESC_ARG;
-	}
-      else
-#endif
-	{
-	  if (reloc == BFD_RELOC_XTENSA_TLS_FUNC)
-	    return BFD_RELOC_XTENSA_TLSDESC_FN;
-	  else if (reloc == BFD_RELOC_XTENSA_TLS_ARG)
-	    return BFD_RELOC_XTENSA_TLSDESC_ARG;
-	}
+      if (reloc == BFD_RELOC_XTENSA_TLS_FUNC)
+	return BFD_RELOC_XTENSA_TLSDESC_FN;
+      else if (reloc == BFD_RELOC_XTENSA_TLS_ARG)
+	return xtensa_fdpic
+	  ? BFD_RELOC_XTENSA_GOT_TLSDESC_ARG
+	  : BFD_RELOC_XTENSA_TLSDESC_ARG;
     }
 
   if (reloc == BFD_RELOC_UNUSED)
@@ -6032,6 +6022,7 @@ xtensa_fix_adjustable (fixS *fixP)
     case BFD_RELOC_XTENSA_GOTFUNCDESC:
     case BFD_RELOC_XTENSA_GOTOFFFUNCDESC:
     case BFD_RELOC_XTENSA_FUNCDESC:
+    case BFD_RELOC_XTENSA_GOT_TLS_TPOFF:
       return false;
 
     default:
@@ -6139,6 +6130,7 @@ md_apply_fix (fixS *fixP, valueT *valP, segT seg)
 
     case BFD_RELOC_XTENSA_TLSDESC_FN:
     case BFD_RELOC_XTENSA_TLSDESC_ARG:
+    case BFD_RELOC_XTENSA_GOT_TLSDESC_ARG:
     case BFD_RELOC_XTENSA_TLS_TPOFF:
     case BFD_RELOC_XTENSA_GOT_TLS_TPOFF:
     case BFD_RELOC_XTENSA_TLS_DTPOFF:

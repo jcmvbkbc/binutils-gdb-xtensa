@@ -366,6 +366,9 @@ static reloc_howto_type elf_howto_table[] =
   HOWTO (R_XTENSA_FUNCDESC_VALUE, 0, 4, 32, false, 0, complain_overflow_bitfield,
 	 bfd_elf_xtensa_reloc, "R_XTENSA_FUNCDESC_VALUE",
 	 false, 0, 0xffffffff, false),
+  HOWTO (R_XTENSA_GOT_TLSDESC_ARG, 0, 4, 32, false, 0, complain_overflow_dont,
+	 bfd_elf_xtensa_reloc, "R_XTENSA_GOT_TLSDESC_ARG",
+	 false, 0, 0xffffffff, false),
   HOWTO (R_XTENSA_GOT_TLS_TPOFF, 0, 4, 32, false, 0, complain_overflow_dont,
 	 bfd_elf_xtensa_reloc, "R_XTENSA_GOT_TLS_TPOFF",
 	 false, 0, 0xffffffff, false),
@@ -487,6 +490,10 @@ elf_xtensa_reloc_type_lookup (bfd *abfd ATTRIBUTE_UNUSED,
     case BFD_RELOC_XTENSA_TLSDESC_ARG:
       TRACE ("BFD_RELOC_XTENSA_TLSDESC_ARG");
       return &elf_howto_table[(unsigned) R_XTENSA_TLSDESC_ARG ];
+
+    case BFD_RELOC_XTENSA_GOT_TLSDESC_ARG:
+      TRACE ("BFD_RELOC_XTENSA_GOT_TLSDESC_ARG");
+      return &elf_howto_table[(unsigned) R_XTENSA_GOT_TLSDESC_ARG ];
 
     case BFD_RELOC_XTENSA_TLS_DTPOFF:
       TRACE ("BFD_RELOC_XTENSA_TLS_DTPOFF");
@@ -1279,6 +1286,21 @@ elf_xtensa_check_relocs (bfd *abfd,
 	    }
 	  break;
 
+	case R_XTENSA_GOT_TLSDESC_ARG:
+	  if (bfd_link_dll (info))
+	    {
+	      tls_type = GOT_TLS_GD;
+	      got_cnt = true;
+	    }
+	  else
+	    {
+	      tls_type = GOT_TLS_IE;
+	      if (h && elf_xtensa_hash_entry (h) != htab->tlsbase
+		  && elf_xtensa_dynamic_symbol_p (h, info))
+		got_cnt = true;
+	    }
+	  break;
+
 	case R_XTENSA_TLS_DTPOFF:
 	  if (bfd_link_dll (info))
 	    tls_type = GOT_TLS_GD;
@@ -1790,7 +1812,7 @@ elf_xtensa_allocate_dynrelocs (struct elf_link_hash_entry *h, void *arg)
     {
       asection *s = htab->elf.sgot;
 
-      if (h->dynindx == -1)
+      //if (h->dynindx == -1)
 	elf_xtensa_allocate_funcdesc (info, eh);
 
       eh->fdpic_cnts.gotfuncdesc_offset = s->size;
@@ -2320,6 +2342,7 @@ elf_xtensa_do_reloc (reloc_howto_type *howto,
     case R_XTENSA_FUNCDESC:
     case R_XTENSA_TLSDESC_FN:
     case R_XTENSA_TLSDESC_ARG:
+    case R_XTENSA_GOT_TLSDESC_ARG:
     case R_XTENSA_TLS_DTPOFF:
     case R_XTENSA_TLS_TPOFF:
     case R_XTENSA_GOT_TLS_TPOFF:
@@ -2916,6 +2939,7 @@ elf_xtensa_fill_funcdesc (bfd *output_bfd,
 #define IS_XTENSA_TLS_RELOC(R_TYPE) \
   ((R_TYPE) == R_XTENSA_TLSDESC_FN \
    || (R_TYPE) == R_XTENSA_TLSDESC_ARG \
+   || (R_TYPE) == R_XTENSA_GOT_TLSDESC_ARG \
    || (R_TYPE) == R_XTENSA_TLS_DTPOFF \
    || (R_TYPE) == R_XTENSA_TLS_TPOFF \
    || (R_TYPE) == R_XTENSA_GOT_TLS_TPOFF \
