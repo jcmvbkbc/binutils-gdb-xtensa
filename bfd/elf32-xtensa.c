@@ -1599,15 +1599,6 @@ elf_xtensa_create_dynamic_sections (bfd *dynobj, struct bfd_link_info *info)
   if (! add_extra_plt_sections (info, htab->plt_reloc_count))
     return false;
 
-  noalloc_flags = (SEC_HAS_CONTENTS | SEC_IN_MEMORY
-		   | SEC_LINKER_CREATED | SEC_READONLY);
-  flags = noalloc_flags | SEC_ALLOC | SEC_LOAD;
-
-  /* Mark the ".got.plt" section READONLY.  */
-  if (htab->elf.sgotplt == NULL
-      || !bfd_set_section_flags (htab->elf.sgotplt, flags))
-    return false;
-
   if (htab->fdpic_p)
     {
       htab->srofixup = bfd_make_section_with_flags (dynobj, ".rofixup",
@@ -1622,6 +1613,15 @@ elf_xtensa_create_dynamic_sections (bfd *dynobj, struct bfd_link_info *info)
     }
   else
     {
+      noalloc_flags = (SEC_HAS_CONTENTS | SEC_IN_MEMORY
+		       | SEC_LINKER_CREATED | SEC_READONLY);
+      flags = noalloc_flags | SEC_ALLOC | SEC_LOAD;
+
+      /* Mark the ".got.plt" section READONLY.  */
+      if (htab->elf.sgotplt == NULL
+	  || !bfd_set_section_flags (htab->elf.sgotplt, flags))
+	return false;
+
       /* Create ".got.loc" (literal tables for use by dynamic linker).  */
       htab->sgotloc = bfd_make_section_anyway_with_flags (dynobj, ".got.loc",
 							  flags);
@@ -1971,7 +1971,8 @@ elf_xtensa_size_dynamic_sections (bfd *output_bfd ATTRIBUTE_UNUSED,
 	}
 
       /* Allocate room for one word in ".got".  */
-      htab->elf.sgot->size = 4;
+      if (!htab->fdpic_p)
+	htab->elf.sgot->size = 4;
 
       /* Allocate space in ".rela.got" for literals that reference global
 	 symbols and space in ".rela.plt" for literals that have PLT
@@ -1986,6 +1987,8 @@ elf_xtensa_size_dynamic_sections (bfd *output_bfd ATTRIBUTE_UNUSED,
       if (bfd_link_pic (info))
 	elf_xtensa_allocate_local_got_size (info);
 
+      if (!htab->fdpic_p)
+	{
       /* Allocate space in ".plt" to match the size of ".rela.plt".  For
 	 each PLT entry, we need the PLT code plus a 4-byte literal.
 	 For each chunk of ".plt", we also need two more 4-byte
@@ -2048,6 +2051,7 @@ elf_xtensa_size_dynamic_sections (bfd *output_bfd ATTRIBUTE_UNUSED,
 		    sgotloc->size += s->size;
 		}
 	    }
+	}
 	}
     }
 
@@ -3904,7 +3908,7 @@ elf_xtensa_finish_dynamic_sections (bfd *output_bfd,
   sgot = htab->elf.sgot;
   if (sgot)
     {
-      BFD_ASSERT (sgot->size == 4);
+      BFD_ASSERT (sgot->size >= 4);
       if (sdyn == NULL)
 	bfd_put_32 (output_bfd, 0, sgot->contents);
       else
@@ -12156,7 +12160,8 @@ xtensa_callback_required_dependence (bfd *abfd,
   /* ".plt*" sections have no explicit relocations but they contain L32R
      instructions that reference the corresponding ".got.plt*" sections.  */
   if ((sec->flags & SEC_LINKER_CREATED) != 0
-      && startswith (sec->name, ".plt"))
+      && startswith (sec->name, ".plt")
+      && sec->size)
     {
       asection *sgotplt;
 
@@ -12324,6 +12329,11 @@ static const struct bfd_elf_special_section elf_xtensa_special_sections[] =
 #define elf_match_priority		128
 #undef  ELF_OSABI
 #define ELF_OSABI			ELFOSABI_XTENSA_FDPIC
+
+#undef	elf_backend_got_header_size
+#define elf_backend_got_header_size	12
+#undef	elf_backend_want_got_plt
+#define elf_backend_want_got_plt	0
 
 #undef  bfd_elf32_bfd_link_hash_table_create
 #define bfd_elf32_bfd_link_hash_table_create elf_xtensa_fdpic_link_hash_table_create
