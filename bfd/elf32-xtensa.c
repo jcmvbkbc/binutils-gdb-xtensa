@@ -1777,6 +1777,16 @@ elf_xtensa_allocate_dynrelocs (struct elf_link_hash_entry *h, void *arg)
       h->got.refcount -= eh->tlsfunc_refcount;
     }
 
+  if (htab->fdpic_p)
+    {
+      if (htab->elf.dynamic_sections_created
+	  && h->dynindx == -1
+	  && !h->forced_local
+	  && h->root.type == bfd_link_hash_undefweak
+	  && !bfd_elf_link_record_dynamic_symbol (info, h))
+	return false;
+    }
+
   if (! elf_xtensa_dynamic_symbol_p (h, info))
     elf_xtensa_make_sym_local (info, h);
 

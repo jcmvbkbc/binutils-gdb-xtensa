@@ -1,5 +1,7 @@
 	.data
 	.globl	m1v1
+	.weak	m2w1
+	.weak	m2w2
 	.word	0x12345678
 m1v1:
 	.word	m1f1@funcdesc
@@ -25,6 +27,9 @@ _start:
 	movi	a6, m1v1@got
 	movi	a7, m1v2@got
 	movi	a8, m2v1@got
+
+	movi	a9, m2w1@got
+	movi	a10, m2w2@gotfuncdesc
 
 	.globl	m1f1
 	.align	4
