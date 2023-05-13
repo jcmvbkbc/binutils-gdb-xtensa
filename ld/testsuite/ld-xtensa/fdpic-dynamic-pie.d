@@ -1,6 +1,6 @@
 #source: fdpic-dynamic-m1.s
 #as:
-#ld: -e0 tmpdir/fdpic-dynamic-m2.so
+#ld: -pie -e0 tmpdir/fdpic-dynamic-m2.so
 #objdump: -dsR -j.got -j.text
 #...
 Contents of section .got:
