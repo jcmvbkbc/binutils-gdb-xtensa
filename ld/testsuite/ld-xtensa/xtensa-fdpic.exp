@@ -24,6 +24,7 @@ if { !([istarget "xtensa*-*-*fdpic"]) } {
 }
 
 run_dump_test "fdpic-static"
+run_dump_test "fdpic-static-pie"
 
 if {[check_shared_lib_support]} {
 	run_dump_test "fdpic-shared"
@@ -35,5 +36,6 @@ if {[check_shared_lib_support]
     && [ld_assemble $as $srcdir/$subdir/fdpic-dynamic-m2.s tmpdir/fdpic-dynamic-m2.o]
     && [ld_link $ld tmpdir/fdpic-dynamic-m2.so "-shared tmpdir/fdpic-dynamic-m2.o"] } {
       run_dump_test "fdpic-dynamic"
+      run_dump_test "fdpic-dynamic-pie"
 }
 
