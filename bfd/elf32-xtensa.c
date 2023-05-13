@@ -1731,7 +1731,10 @@ elf_xtensa_allocate_funcdesc (struct bfd_link_info *info,
 	}
       else
 	{
-	  abort ();
+	  if (elf_xtensa_dynamic_symbol_p (&eh->elf, info))
+	    htab->elf.srelgot->size += sizeof (Elf32_External_Rela);
+	  else
+	    htab->srofixup->size += 8;
 	}
     }
 }
@@ -1750,7 +1753,7 @@ elf_xtensa_allocate_local_funcdesc (struct bfd_link_info *info,
       if (bfd_link_pic (info))
 	htab->elf.srelgot->size += 2 * sizeof (Elf32_External_Rela);
       else
-	abort ();
+	htab->srofixup->size += 8;
     }
 }
 
@@ -1805,8 +1808,12 @@ elf_xtensa_allocate_dynrelocs (struct elf_link_hash_entry *h, void *arg)
 
   if (eh->fdpic_cnts.dataref_cnt)
     {
-      htab->elf.srelgot->size += (eh->fdpic_cnts.dataref_cnt
-				  * sizeof (Elf32_External_Rela));
+      if (elf_xtensa_dynamic_symbol_p (&eh->elf, info)
+	  || bfd_link_pic (info))
+	htab->elf.srelgot->size += (eh->fdpic_cnts.dataref_cnt
+				    * sizeof (Elf32_External_Rela));
+      else
+	htab->srofixup->size += eh->fdpic_cnts.dataref_cnt * 4;
     }
 
   if (eh->fdpic_cnts.gotofffuncdesc_cnt)
@@ -1827,10 +1834,11 @@ elf_xtensa_allocate_dynrelocs (struct elf_link_hash_entry *h, void *arg)
 
       eh->fdpic_cnts.gotfuncdesc_offset = s->size;
       s->size += 4;
-      if (bfd_link_pic (info))
+      if (elf_xtensa_dynamic_symbol_p (&eh->elf, info)
+	  || bfd_link_pic (info))
 	htab->elf.srelgot->size += sizeof (Elf32_External_Rela);
       else
-	abort ();
+	htab->srofixup->size += 4;
     }
 
   if (eh->fdpic_cnts.funcdesc_cnt)
@@ -1838,11 +1846,12 @@ elf_xtensa_allocate_dynrelocs (struct elf_link_hash_entry *h, void *arg)
       if (h->dynindx == -1)
 	elf_xtensa_allocate_funcdesc (info, eh);
 
-      if (bfd_link_pic (info))
+      if (elf_xtensa_dynamic_symbol_p (&eh->elf, info)
+	  || bfd_link_pic (info))
 	htab->elf.srelgot->size +=
 	  eh->fdpic_cnts.funcdesc_cnt * sizeof (Elf32_External_Rela);
       else
-	abort ();
+	htab->srofixup->size += eh->fdpic_cnts.funcdesc_cnt * 4;
     }
 
   if (eh->fdpic_cnts.got_cnt)
@@ -1851,10 +1860,11 @@ elf_xtensa_allocate_dynrelocs (struct elf_link_hash_entry *h, void *arg)
 
       eh->fdpic_cnts.got_offset = s->size;
       s->size += 4;
-      if (bfd_link_pic (info))
+      if (elf_xtensa_dynamic_symbol_p (&eh->elf, info)
+	  || bfd_link_pic (info))
 	htab->elf.srelgot->size += sizeof (Elf32_External_Rela);
       else
-	abort ();
+	htab->srofixup->size += 4;
     }
 
   return true;
@@ -1908,8 +1918,11 @@ elf_xtensa_allocate_local_got_size (struct bfd_link_info *info)
 
 	  if (lc->dataref_cnt)
 	    {
-	      htab->elf.srelgot->size += (lc->dataref_cnt
-					  * sizeof (Elf32_External_Rela));
+	      if (bfd_link_pic (info))
+		htab->elf.srelgot->size += (lc->dataref_cnt
+					    * sizeof (Elf32_External_Rela));
+	      else
+		htab->srofixup->size += lc->dataref_cnt * 4;
 	    }
 
 	  if (lc->got_cnt
@@ -1922,13 +1935,16 @@ elf_xtensa_allocate_local_got_size (struct bfd_link_info *info)
 	      if (bfd_link_pic (info))
 		htab->elf.srelgot->size += sizeof (Elf32_External_Rela);
 	      else
-		abort ();
+		htab->srofixup->size += 4;
 	    }
 
 	  if (lc->gotofffuncdesc_cnt || lc->funcdesc_cnt)
 	    {
-	      htab->elf.srelgot->size += (lc->funcdesc_cnt
-					  * sizeof (Elf32_External_Rela));
+	      if (bfd_link_pic (info))
+		htab->elf.srelgot->size += (lc->funcdesc_cnt
+					    * sizeof (Elf32_External_Rela));
+	      else
+		htab->srofixup->size += lc->funcdesc_cnt * 4;
 	      elf_xtensa_allocate_local_funcdesc (info, lc);
 	    }
 	}
@@ -1994,7 +2010,7 @@ elf_xtensa_size_dynamic_sections (bfd *output_bfd ATTRIBUTE_UNUSED,
       /* If we are generating a shared object, we also need space in
 	 ".rela.got" for R_XTENSA_RELATIVE relocs for literals that
 	 reference local symbols.  */
-      if (bfd_link_pic (info))
+      if (bfd_link_pic (info) || htab->fdpic_p)
 	elf_xtensa_allocate_local_got_size (info);
 
       if (!htab->fdpic_p)
@@ -2886,17 +2902,6 @@ replace_tls_insn (Elf_Internal_Rela *rel,
   return true;
 }
 
-static void
-elf_xtensa_add_dynreloc (bfd *output_bfd, asection *srel,
-			 const Elf_Internal_Rela *outrel)
-{
-  bfd_byte *loc;
-
-  loc = srel->contents + srel->reloc_count++ * sizeof (Elf32_External_Rela);
-  bfd_elf32_swap_reloca_out (output_bfd, outrel, loc);
-  BFD_ASSERT (sizeof (Elf32_External_Rela) * srel->reloc_count <= srel->size);
-}
-
 /* Add an FDPIC read-only fixup.  */
 static void
 elf_xtensa_add_rofixup (bfd *output_bfd, asection *srofixup, bfd_vma offset)
@@ -2906,6 +2911,29 @@ elf_xtensa_add_rofixup (bfd *output_bfd, asection *srofixup, bfd_vma offset)
   fixup_offset = srofixup->reloc_count++ * 4;
   BFD_ASSERT (fixup_offset < srofixup->size);
   bfd_put_32 (output_bfd, offset, srofixup->contents + fixup_offset);
+}
+
+static void
+elf_xtensa_add_dynreloc (bfd *output_bfd,
+			 struct bfd_link_info *info,
+			 asection *srel,
+			 const Elf_Internal_Rela *outrel)
+{
+  struct elf_xtensa_link_hash_table *htab = elf_xtensa_hash_table (info);
+
+  if (outrel->r_info == ELF32_R_INFO (0, R_XTENSA_RELATIVE)
+      && htab->fdpic_p && ! bfd_link_pic (info))
+    {
+      elf_xtensa_add_rofixup (output_bfd, htab->srofixup, outrel->r_offset);
+    }
+  else
+    {
+      bfd_byte *loc;
+
+      loc = srel->contents + srel->reloc_count++ * sizeof (Elf32_External_Rela);
+      bfd_elf32_swap_reloca_out (output_bfd, outrel, loc);
+      BFD_ASSERT (sizeof (Elf32_External_Rela) * srel->reloc_count <= srel->size);
+    }
 }
 
 static void
@@ -2930,19 +2958,19 @@ elf_xtensa_fill_funcdesc (bfd *output_bfd,
     {
       outrel.r_info = ELF32_R_INFO (dynindx, R_XTENSA_FUNCDESC_VALUE);
       outrel.r_addend = 0;
-      elf_xtensa_add_dynreloc (output_bfd, srel, &outrel);
+      elf_xtensa_add_dynreloc (output_bfd, info, srel, &outrel);
     }
   else
     {
       outrel.r_info = ELF32_R_INFO (0, R_XTENSA_RELATIVE);
       outrel.r_addend = target;
       outrel.r_addend = 0;
-      elf_xtensa_add_dynreloc (output_bfd, srel, &outrel);
+      elf_xtensa_add_dynreloc (output_bfd, info, srel, &outrel);
       bfd_put_32 (output_bfd, target, sgot->contents + offset);
       outrel.r_offset += 4;
       outrel.r_addend = sgot->output_offset + sgot->output_section->vma;
       outrel.r_addend = 0;
-      elf_xtensa_add_dynreloc (output_bfd, srel, &outrel);
+      elf_xtensa_add_dynreloc (output_bfd, info, srel, &outrel);
       bfd_put_32 (output_bfd,
 		  sgot->output_offset + sgot->output_section->vma,
 		  sgot->contents + offset + 4);
@@ -3254,7 +3282,7 @@ elf_xtensa_relocate_section (bfd *output_bfd,
 	case R_XTENSA_PLT:
 	  if (elf_hash_table (info)->dynamic_sections_created
 	      && (input_section->flags & SEC_ALLOC) != 0
-	      && (dynamic_symbol || bfd_link_pic (info)))
+	      && (dynamic_symbol || bfd_link_pic (info) || htab->fdpic_p))
 	    {
 	      Elf_Internal_Rela outrel;
 	      asection *srel;
@@ -3332,7 +3360,7 @@ elf_xtensa_relocate_section (bfd *output_bfd,
 	       * that is in the data segment
 	       */
 	      if (!htab->fdpic_p || !(input_section->flags & SEC_READONLY))
-		elf_xtensa_add_dynreloc (output_bfd, srel, &outrel);
+		elf_xtensa_add_dynreloc (output_bfd, info, srel, &outrel);
 	    }
 	  else if (r_type == R_XTENSA_ASM_EXPAND && dynamic_symbol)
 	    {
@@ -3406,7 +3434,7 @@ elf_xtensa_relocate_section (bfd *output_bfd,
 		      outrel.r_addend = 0; // only for GOT
 		    }
 
-		  elf_xtensa_add_dynreloc (output_bfd, srel, &outrel);
+		  elf_xtensa_add_dynreloc (output_bfd, info, srel, &outrel);
 		  *pgot |= 1;
 		}
 
@@ -3465,7 +3493,7 @@ elf_xtensa_relocate_section (bfd *output_bfd,
 			  outrel.r_addend = 0;
 			}
 
-		      elf_xtensa_add_dynreloc (output_bfd, srel, &outrel);
+		      elf_xtensa_add_dynreloc (output_bfd, info, srel, &outrel);
 		      elf_xtensa_fill_funcdesc (output_bfd, info, pfuncdesc,
 						dynamic_symbol ? h->dynindx : -1,
 						target);
@@ -3562,7 +3590,7 @@ elf_xtensa_relocate_section (bfd *output_bfd,
 		  outrel.r_addend = 0;
 		}
 
-	      elf_xtensa_add_dynreloc (output_bfd, srel, &outrel);
+	      elf_xtensa_add_dynreloc (output_bfd, info, srel, &outrel);
 	      elf_xtensa_fill_funcdesc (output_bfd, info, pfuncdesc,
 					dynamic_symbol ? dynindx : -1,
 					target);
@@ -3652,7 +3680,7 @@ elf_xtensa_relocate_section (bfd *output_bfd,
 		unresolved_reloc = false;
 
 		BFD_ASSERT (srel);
-		elf_xtensa_add_dynreloc (output_bfd, srel, &outrel);
+		elf_xtensa_add_dynreloc (output_bfd, info, srel, &outrel);
 	      }
 	  }
 	  break;
