@@ -1820,7 +1820,11 @@ elf_xtensa_allocate_dynrelocs (struct elf_link_hash_entry *h, void *arg)
     {
       /* Symbol musn't be exported.  */
       if (h->dynindx != -1)
-	abort ();
+	{
+	  fprintf (stderr, "%s: symbol: %s\n",
+		   __func__, h->root.root.string);
+	  abort ();
+	}
 
       elf_xtensa_allocate_funcdesc (info, eh);
     }
