@@ -3582,6 +3582,7 @@ elf_xtensa_relocate_section (bfd *output_bfd,
 		  outrel.r_info = ELF32_R_INFO (h->dynindx, r_type);
 		  outrel.r_addend = rel->r_addend;
 		  unresolved_reloc = false;
+		  relocation = 0;
 		}
 	      else
 		{
