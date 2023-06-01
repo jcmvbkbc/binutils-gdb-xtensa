@@ -1829,7 +1829,7 @@ elf_xtensa_allocate_dynrelocs (struct elf_link_hash_entry *h, void *arg)
     {
       asection *s = htab->elf.sgot;
 
-      //if (h->dynindx == -1)
+      if (! elf_xtensa_dynamic_symbol_p (h, info))
 	elf_xtensa_allocate_funcdesc (info, eh);
 
       eh->fdpic_cnts.gotfuncdesc_offset = s->size;
@@ -1843,7 +1843,7 @@ elf_xtensa_allocate_dynrelocs (struct elf_link_hash_entry *h, void *arg)
 
   if (eh->fdpic_cnts.funcdesc_cnt)
     {
-      if (h->dynindx == -1)
+      if (! elf_xtensa_dynamic_symbol_p (h, info))
 	elf_xtensa_allocate_funcdesc (info, eh);
 
       if (elf_xtensa_dynamic_symbol_p (&eh->elf, info)
@@ -3491,12 +3491,11 @@ elf_xtensa_relocate_section (bfd *output_bfd,
 				      sgot->contents
 				      + eh->fdpic_cnts.gotfuncdesc_offset);
 			  outrel.r_addend = 0;
+			  elf_xtensa_fill_funcdesc (output_bfd, info, pfuncdesc,
+						    -1, target);
 			}
 
 		      elf_xtensa_add_dynreloc (output_bfd, info, srel, &outrel);
-		      elf_xtensa_fill_funcdesc (output_bfd, info, pfuncdesc,
-						dynamic_symbol ? h->dynindx : -1,
-						target);
 		    }
 		  eh->fdpic_cnts.gotfuncdesc_offset |= 1;
 		}
@@ -3550,7 +3549,6 @@ elf_xtensa_relocate_section (bfd *output_bfd,
 	      Elf_Internal_Rela outrel;
 	      bfd_vma target = relocation + rel->r_addend;
 	      bfd_vma *pfuncdesc;
-	      int dynindx = -1;
 
 	      if (sgot == NULL)
 		return bfd_reloc_notsupported;
@@ -3559,7 +3557,6 @@ elf_xtensa_relocate_section (bfd *output_bfd,
 		{
 		  eh = elf_xtensa_hash_entry (h);
 		  pfuncdesc = &eh->fdpic_cnts.funcdesc_offset;
-		  dynindx = h->dynindx;
 		}
 	      else
 		{
@@ -3589,12 +3586,11 @@ elf_xtensa_relocate_section (bfd *output_bfd,
 		  outrel.r_info = ELF32_R_INFO (0, R_XTENSA_RELATIVE);
 		  outrel.r_addend = relocation;
 		  outrel.r_addend = 0;
+		  elf_xtensa_fill_funcdesc (output_bfd, info, pfuncdesc,
+					    -1, target);
 		}
 
 	      elf_xtensa_add_dynreloc (output_bfd, info, srel, &outrel);
-	      elf_xtensa_fill_funcdesc (output_bfd, info, pfuncdesc,
-					dynamic_symbol ? dynindx : -1,
-					target);
 	      rel->r_addend = 0;
 	    }
 	  break;
