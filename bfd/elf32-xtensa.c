@@ -12366,7 +12366,7 @@ static const struct bfd_elf_special_section elf_xtensa_special_sections[] =
 #define ELF_OSABI			ELFOSABI_XTENSA_FDPIC
 
 #undef	elf_backend_got_header_size
-#define elf_backend_got_header_size	12
+#define elf_backend_got_header_size	16
 #undef	elf_backend_want_got_plt
 #define elf_backend_want_got_plt	0
 
