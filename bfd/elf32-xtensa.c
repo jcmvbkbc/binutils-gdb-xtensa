@@ -1823,7 +1823,7 @@ elf_xtensa_allocate_dynrelocs (struct elf_link_hash_entry *h, void *arg)
 	{
 	  fprintf (stderr, "%s: symbol: %s\n",
 		   __func__, h->root.root.string);
-	  abort ();
+	  //abort ();
 	}
 
       elf_xtensa_allocate_funcdesc (info, eh);
