@@ -12304,8 +12304,7 @@ static const struct bfd_elf_special_section elf_xtensa_special_sections[] =
 #define bfd_elf32_bfd_print_private_bfd_data elf_xtensa_print_private_bfd_data
 #define bfd_elf32_bfd_relax_section	     elf_xtensa_relax_section
 #define bfd_elf32_bfd_reloc_type_lookup	     elf_xtensa_reloc_type_lookup
-#define bfd_elf32_bfd_reloc_name_lookup \
-  elf_xtensa_reloc_name_lookup
+#define bfd_elf32_bfd_reloc_name_lookup      elf_xtensa_reloc_name_lookup
 #define bfd_elf32_bfd_set_private_flags	     elf_xtensa_set_private_flags
 #define bfd_elf32_bfd_link_hash_table_create elf_xtensa_link_hash_table_create
 
