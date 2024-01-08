@@ -1,5 +1,6 @@
 	.data
 	.weak	m0v1
+	.weak	m0f1
 	.globl	m1v1
 	.word	0x12345678
 m1v1:
@@ -27,9 +28,10 @@ _start:
 	movi	a7, m1v1 # no reloc
 	movi	a8, m1v2 # no reloc
 
-	#movi	a9, m0v1 # no reloc
+	movi	a9, m0v1 # no reloc
 	#movi	a10, m0v1@gotoff # error: gotoff for undef weak
-	#movi	a11, m0v1@got
+	movi	a11, m0v1@got
+	movi	a12, m0f1@gotfuncdesc
 
 	.globl	m1f1
 	.align	4

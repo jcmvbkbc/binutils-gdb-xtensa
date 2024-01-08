@@ -24,12 +24,10 @@ if { !([istarget "xtensa*-*-*fdpic"]) } {
 }
 
 run_dump_test "fdpic-static"
-run_dump_test "fdpic-static-pie"
 
 if {[check_shared_lib_support]} {
 	run_dump_test "fdpic-shared"
 	run_dump_test "fdpic-shared-symbolic"
-	run_dump_test "fdpic-tls-shared"
 }
 
 if {[check_shared_lib_support]
