@@ -1193,6 +1193,35 @@ elf_xtensa_allocate_local_sym_info (bfd *abfd)
   return true;
 }
 
+static bool
+create_got_section (bfd *dynobj, struct bfd_link_info *info)
+{
+  struct elf_xtensa_link_hash_table *htab;
+
+  htab = elf_xtensa_hash_table (info);
+  if (htab == NULL)
+    return false;
+
+  if (! _bfd_elf_create_got_section (dynobj, info))
+    return false;
+
+  /* Also create .rofixup.  */
+  if (htab->fdpic_p)
+    {
+      htab->srofixup = bfd_make_section_with_flags (dynobj, ".rofixup",
+						    (SEC_ALLOC | SEC_LOAD
+						     | SEC_HAS_CONTENTS
+						     | SEC_IN_MEMORY
+						     | SEC_LINKER_CREATED
+						     | SEC_READONLY));
+      if (htab->srofixup == NULL
+	  || !bfd_set_section_alignment (htab->srofixup, 2))
+	return false;
+    }
+
+  return true;
+}
+
 /* Look through the relocs for a section during the first phase, and
    calculate needed space in the dynamic reloc sections.  */
 
@@ -1216,6 +1245,9 @@ elf_xtensa_check_relocs (bfd *abfd,
   htab = elf_xtensa_hash_table (info);
   if (htab == NULL)
     return false;
+
+  if (htab->elf.dynobj == NULL)
+    htab->elf.dynobj = abfd;
 
   symtab_hdr = &elf_tdata (abfd)->symtab_hdr;
   sym_hashes = elf_sym_hashes (abfd);
@@ -1383,6 +1415,11 @@ elf_xtensa_check_relocs (bfd *abfd,
 	      || dataref_cnt))
 	_bfd_error_handler
 	  (_("%pB: unexpected FDPIC-specific relocation"), abfd);
+
+      if ((got_cnt || gotfuncdesc_cnt || dataref_cnt)
+	  && htab->elf.sgot == NULL
+	  && !create_got_section (htab->elf.dynobj, info))
+	return false;
 
       if (h)
 	{
@@ -1590,6 +1627,9 @@ elf_xtensa_create_dynamic_sections (bfd *dynobj, struct bfd_link_info *info)
   if (htab == NULL)
     return false;
 
+  if (!htab->elf.sgot && !create_got_section (dynobj, info))
+    return false;
+
   /* First do all the standard stuff.  */
   if (! _bfd_elf_create_dynamic_sections (dynobj, info))
     return false;
@@ -1599,19 +1639,7 @@ elf_xtensa_create_dynamic_sections (bfd *dynobj, struct bfd_link_info *info)
   if (! add_extra_plt_sections (info, htab->plt_reloc_count))
     return false;
 
-  if (htab->fdpic_p)
-    {
-      htab->srofixup = bfd_make_section_with_flags (dynobj, ".rofixup",
-						    (SEC_ALLOC | SEC_LOAD
-						     | SEC_HAS_CONTENTS
-						     | SEC_IN_MEMORY
-						     | SEC_LINKER_CREATED
-						     | SEC_READONLY));
-      if (htab->srofixup == NULL
-	  || !bfd_set_section_alignment (htab->srofixup, 2))
-	return false;
-    }
-  else
+  if (!htab->fdpic_p)
     {
       noalloc_flags = (SEC_HAS_CONTENTS | SEC_IN_MEMORY
 		       | SEC_LINKER_CREATED | SEC_READONLY);
@@ -1798,7 +1826,10 @@ elf_xtensa_allocate_dynrelocs (struct elf_link_hash_entry *h, void *arg)
     {
       asection *s = htab->elf.sgot;
 
-      eh->fdpic_cnts.gotfuncdesc_offset = s->size;
+      if (eh->fdpic_cnts.got_cnt)
+	eh->fdpic_cnts.got_offset = s->size;
+      if (eh->fdpic_cnts.gotfuncdesc_cnt)
+	eh->fdpic_cnts.gotfuncdesc_offset = s->size;
       s->size += 4;
       return true;
     }
@@ -2089,6 +2120,13 @@ elf_xtensa_size_dynamic_sections (bfd *output_bfd ATTRIBUTE_UNUSED,
 	    }
 	}
 	}
+    }
+  else if (htab->fdpic_p)
+    {
+      elf_link_hash_traverse (elf_hash_table (info),
+			      elf_xtensa_allocate_dynrelocs,
+			      (void *) info);
+      elf_xtensa_allocate_local_got_size (info);
     }
 
   /* At the very end of the .rofixup section is a pointer to the GOT,
@@ -3041,7 +3079,8 @@ elf_xtensa_relocate_section (bfd *output_bfd,
   sym_hashes = elf_sym_hashes (input_bfd);
   local_got_tls_types = elf_xtensa_local_got_tls_type (input_bfd);
 
-  if (elf_hash_table (info)->dynamic_sections_created)
+  if (elf_hash_table (info)->dynamic_sections_created
+      || htab->fdpic_p)
     {
       ltblsize = xtensa_read_table_entries (input_bfd, input_section,
 					    &lit_table, XTENSA_LIT_SEC_NAME,
@@ -3290,9 +3329,10 @@ elf_xtensa_relocate_section (bfd *output_bfd,
 	{
 	case R_XTENSA_32:
 	case R_XTENSA_PLT:
-	  if (elf_hash_table (info)->dynamic_sections_created
-	      && (input_section->flags & SEC_ALLOC) != 0
-	      && (dynamic_symbol || bfd_link_pic (info) || htab->fdpic_p))
+	  if ((input_section->flags & SEC_ALLOC) != 0
+	      && ((elf_hash_table (info)->dynamic_sections_created
+		   && (dynamic_symbol || bfd_link_pic (info)))
+		  || htab->fdpic_p))
 	    {
 	      Elf_Internal_Rela outrel;
 	      asection *srel;
@@ -3422,6 +3462,7 @@ elf_xtensa_relocate_section (bfd *output_bfd,
 	      if (!(*pgot & 1))
 		{
 		  Elf_Internal_Rela outrel;
+		  int need_reloc = 1;
 
 		  outrel.r_offset = relocation + sgot->output_section->vma;
 		  if (dynamic_symbol)
@@ -3434,17 +3475,26 @@ elf_xtensa_relocate_section (bfd *output_bfd,
 		    }
 		  else
 		    {
-		      outrel.r_info = ELF32_R_INFO (0,
-						    r_type == R_XTENSA_GOT
-						    ? R_XTENSA_RELATIVE
-						    : R_XTENSA_TLS_TPOFF);
-		      outrel.r_addend = target;
-		      bfd_put_32 (output_bfd, outrel.r_addend,
+		      bfd_vma got_value = 0;
+
+		      if (! is_weak_undef)
+			{
+			  outrel.r_info = ELF32_R_INFO (0,
+							r_type == R_XTENSA_GOT
+							? R_XTENSA_RELATIVE
+							: R_XTENSA_TLS_TPOFF);
+			  got_value = target;
+			  outrel.r_addend = 0; // only for GOT
+			}
+		      else
+			need_reloc = 0;
+
+		      bfd_put_32 (output_bfd, got_value,
 				  sgot->contents + *pgot);
-		      outrel.r_addend = 0; // only for GOT
 		    }
 
-		  elf_xtensa_add_dynreloc (output_bfd, info, srel, &outrel);
+		  if (need_reloc)
+		    elf_xtensa_add_dynreloc (output_bfd, info, srel, &outrel);
 		  *pgot |= 1;
 		}
 
@@ -4130,64 +4180,65 @@ elf_xtensa_fdpic_finish_dynamic_sections (bfd *output_bfd,
 					  struct bfd_link_info *info)
 {
   struct elf_xtensa_link_hash_table *htab;
-  bfd *dynobj;
-  asection *sdyn, *srelgot, *sgot;
-  Elf32_External_Dyn *dyncon, *dynconend;
-
-  if (! elf_hash_table (info)->dynamic_sections_created)
-    return true;
 
   htab = elf_xtensa_hash_table (info);
   if (htab == NULL)
     return false;
 
-  dynobj = elf_hash_table (info)->dynobj;
-  sdyn = bfd_get_linker_section (dynobj, ".dynamic");
-  BFD_ASSERT (sdyn != NULL);
-
-  /* Set the first entry in the global offset table to the address of
-     the dynamic section.  */
-  sgot = htab->elf.sgot;
-  if (sgot)
+  if (elf_hash_table (info)->dynamic_sections_created)
     {
-      bfd_put_32 (output_bfd, 0, sgot->contents);
-    }
+      bfd *dynobj;
+      asection *sdyn, *srelgot, *sgot;
+      Elf32_External_Dyn *dyncon, *dynconend;
 
-  srelgot = htab->elf.srelgot;
+      dynobj = elf_hash_table (info)->dynobj;
+      sdyn = bfd_get_linker_section (dynobj, ".dynamic");
+      BFD_ASSERT (sdyn != NULL);
 
-  /* All the dynamic relocations have been emitted at this point.
-     Make sure the relocation sections are the correct size.  */
-  if (srelgot && srelgot->size != (sizeof (Elf32_External_Rela)
-				   * srelgot->reloc_count))
-    {
-      abort ();
-    }
-
-  dyncon = (Elf32_External_Dyn *) sdyn->contents;
-  dynconend = (Elf32_External_Dyn *) (sdyn->contents + sdyn->size);
-  for (; dyncon < dynconend; dyncon++)
-    {
-      Elf_Internal_Dyn dyn;
-
-      bfd_elf32_swap_dyn_in (dynobj, dyncon, &dyn);
-
-      switch (dyn.d_tag)
+      /* Set the first entry in the global offset table to the address of
+	 the dynamic section.  */
+      sgot = htab->elf.sgot;
+      if (sgot)
 	{
-	default:
-	  break;
-
-	case DT_PLTGOT:
-	  dyn.d_un.d_ptr = (htab->elf.sgot->output_section->vma
-			    + htab->elf.sgot->output_offset);
-	  break;
-
-	case DT_RELA:
-	  dyn.d_un.d_ptr = (htab->elf.srelgot->output_section->vma
-			    + htab->elf.srelgot->output_offset);
-	  break;
+	  bfd_put_32 (output_bfd, 0, sgot->contents);
 	}
 
-      bfd_elf32_swap_dyn_out (output_bfd, &dyn, dyncon);
+      srelgot = htab->elf.srelgot;
+
+      /* All the dynamic relocations have been emitted at this point.
+	 Make sure the relocation sections are the correct size.  */
+      if (srelgot && srelgot->size != (sizeof (Elf32_External_Rela)
+				       * srelgot->reloc_count))
+	{
+	  abort ();
+	}
+
+      dyncon = (Elf32_External_Dyn *) sdyn->contents;
+      dynconend = (Elf32_External_Dyn *) (sdyn->contents + sdyn->size);
+      for (; dyncon < dynconend; dyncon++)
+	{
+	  Elf_Internal_Dyn dyn;
+
+	  bfd_elf32_swap_dyn_in (dynobj, dyncon, &dyn);
+
+	  switch (dyn.d_tag)
+	    {
+	    default:
+	      break;
+
+	    case DT_PLTGOT:
+	      dyn.d_un.d_ptr = (htab->elf.sgot->output_section->vma
+				+ htab->elf.sgot->output_offset);
+	      break;
+
+	    case DT_RELA:
+	      dyn.d_un.d_ptr = (htab->elf.srelgot->output_section->vma
+				+ htab->elf.srelgot->output_offset);
+	      break;
+	    }
+
+	  bfd_elf32_swap_dyn_out (output_bfd, &dyn, dyncon);
+	}
     }
 
   /* At the very end of the .rofixup section is a pointer to the GOT.  */
