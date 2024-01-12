@@ -2978,6 +2978,7 @@ elf_xtensa_add_dynreloc (bfd *output_bfd,
     {
       bfd_byte *loc;
 
+      BFD_ASSERT (srel != NULL);
       loc = srel->contents + srel->reloc_count++ * sizeof (Elf32_External_Rela);
       bfd_elf32_swap_reloca_out (output_bfd, outrel, loc);
       BFD_ASSERT (sizeof (Elf32_External_Rela) * srel->reloc_count <= srel->size);
@@ -3342,8 +3343,6 @@ elf_xtensa_relocate_section (bfd *output_bfd,
 	      else
 		srel = htab->elf.srelgot;
 
-	      BFD_ASSERT (srel != NULL);
-
 	      outrel.r_offset =
 		_bfd_elf_section_offset (output_bfd, info,
 					 input_section, rel->r_offset);
@@ -3357,7 +3356,8 @@ elf_xtensa_relocate_section (bfd *output_bfd,
 
 		  /* Complain if the relocation is in a read-only section
 		     and not in a literal pool.  */
-		  if ((input_section->flags & SEC_READONLY) != 0
+		  if (!htab->fdpic_p
+		      && (input_section->flags & SEC_READONLY) != 0
 		      && !elf_xtensa_in_literal_pool (lit_table, ltblsize,
 						      outrel.r_offset))
 		    {
@@ -3383,6 +3383,8 @@ elf_xtensa_relocate_section (bfd *output_bfd,
 			{
 			  outrel.r_info =
 			    ELF32_R_INFO (h->dynindx, R_XTENSA_JMP_SLOT);
+
+			  BFD_ASSERT (srel != NULL);
 
 			  /* Create the PLT entry and set the initial
 			     contents of the literal entry to the address of
