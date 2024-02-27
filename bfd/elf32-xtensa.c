@@ -58,6 +58,10 @@ static bool is_indirect_call_opcode (xtensa_opcode);
 static bool is_direct_call_opcode (xtensa_opcode);
 static bool is_windowed_call_opcode (xtensa_opcode);
 static xtensa_opcode get_const16_opcode (void);
+static xtensa_opcode get_l32i_opcode (void);
+static xtensa_opcode get_l32in_opcode (void);
+static xtensa_opcode get_add_opcode (void);
+static xtensa_opcode get_addn_opcode (void);
 static xtensa_opcode get_l32r_opcode (void);
 static bfd_vma l32r_offset (bfd_vma, bfd_vma);
 static int get_relocation_opnd (xtensa_opcode, int);
@@ -366,12 +370,27 @@ static reloc_howto_type elf_howto_table[] =
   HOWTO (R_XTENSA_FUNCDESC_VALUE, 0, 4, 32, false, 0, complain_overflow_bitfield,
 	 bfd_elf_xtensa_reloc, "R_XTENSA_FUNCDESC_VALUE",
 	 false, 0, 0xffffffff, false),
-  HOWTO (R_XTENSA_GOT_TLSDESC_ARG, 0, 4, 32, false, 0, complain_overflow_dont,
-	 bfd_elf_xtensa_reloc, "R_XTENSA_GOT_TLSDESC_ARG",
+  HOWTO (R_XTENSA_TLS_GOTTPOFF, 0, 4, 32, false, 0, complain_overflow_dont,
+	 bfd_elf_xtensa_reloc, "R_XTENSA_TLS_GOTTPOFF",
 	 false, 0, 0xffffffff, false),
-  HOWTO (R_XTENSA_GOT_TLS_TPOFF, 0, 4, 32, false, 0, complain_overflow_dont,
-	 bfd_elf_xtensa_reloc, "R_XTENSA_GOT_TLS_TPOFF",
+  HOWTO (R_XTENSA_GOTTLSDESC, 0, 4, 32, false, 0, complain_overflow_dont,
+	 bfd_elf_xtensa_reloc, "R_XTENSA_GOTTLSDESC",
 	 false, 0, 0xffffffff, false),
+  HOWTO (R_XTENSA_TLSDESC, 0, 4, 32, false, 0, complain_overflow_dont,
+	 bfd_elf_xtensa_reloc, "R_XTENSA_TLSDESC",
+	 false, 0, 0xffffffff, false),
+  HOWTO (R_XTENSA_TLS_FUNCDESC, 0, 0, 0, false, 0, complain_overflow_dont,
+	 bfd_elf_xtensa_reloc, "R_XTENSA_TLS_FUNCDESC",
+	 false, 0, 0, false),
+  HOWTO (R_XTENSA_TLS_GOT, 0, 0, 0, false, 0, complain_overflow_dont,
+	 bfd_elf_xtensa_reloc, "R_XTENSA_TLS_GOT",
+	 false, 0, 0, false),
+  HOWTO (R_XTENSA_TLS_TPOFF_PTR, 0, 0, 0, false, 0, complain_overflow_dont,
+	 bfd_elf_xtensa_reloc, "R_XTENSA_TLS_TPOFF_PTR",
+	 false, 0, 0, false),
+  HOWTO (R_XTENSA_TLS_TPOFF_LOAD, 0, 0, 0, false, 0, complain_overflow_dont,
+	 bfd_elf_xtensa_reloc, "R_XTENSA_TLS_TPOFF_LOAD",
+	 false, 0, 0, false),
 };
 
 #if DEBUG_GEN_RELOC
@@ -491,9 +510,13 @@ elf_xtensa_reloc_type_lookup (bfd *abfd ATTRIBUTE_UNUSED,
       TRACE ("BFD_RELOC_XTENSA_TLSDESC_ARG");
       return &elf_howto_table[(unsigned) R_XTENSA_TLSDESC_ARG ];
 
-    case BFD_RELOC_XTENSA_GOT_TLSDESC_ARG:
-      TRACE ("BFD_RELOC_XTENSA_GOT_TLSDESC_ARG");
-      return &elf_howto_table[(unsigned) R_XTENSA_GOT_TLSDESC_ARG ];
+    case BFD_RELOC_XTENSA_GOTTLSDESC:
+      TRACE ("BFD_RELOC_XTENSA_GOTTLSDESC");
+      return &elf_howto_table[(unsigned) R_XTENSA_GOTTLSDESC ];
+
+    case BFD_RELOC_XTENSA_TLSDESC:
+      TRACE ("BFD_RELOC_XTENSA_TLSDESC");
+      return &elf_howto_table[(unsigned) R_XTENSA_TLSDESC ];
 
     case BFD_RELOC_XTENSA_TLS_DTPOFF:
       TRACE ("BFD_RELOC_XTENSA_TLS_DTPOFF");
@@ -503,9 +526,17 @@ elf_xtensa_reloc_type_lookup (bfd *abfd ATTRIBUTE_UNUSED,
       TRACE ("BFD_RELOC_XTENSA_TLS_TPOFF");
       return &elf_howto_table[(unsigned) R_XTENSA_TLS_TPOFF ];
 
-    case BFD_RELOC_XTENSA_GOT_TLS_TPOFF:
-      TRACE ("BFD_RELOC_XTENSA_GOT_TLS_TPOFF");
-      return &elf_howto_table[(unsigned) R_XTENSA_GOT_TLS_TPOFF ];
+    case BFD_RELOC_XTENSA_TLS_GOTTPOFF:
+      TRACE ("BFD_RELOC_XTENSA_TLS_GOTTPOFF");
+      return &elf_howto_table[(unsigned) R_XTENSA_TLS_GOTTPOFF ];
+
+    case BFD_RELOC_XTENSA_TLS_FUNCDESC:
+      TRACE ("BFD_RELOC_XTENSA_TLS_FUNCDESC");
+      return &elf_howto_table[(unsigned) R_XTENSA_TLS_FUNCDESC ];
+
+    case BFD_RELOC_XTENSA_TLS_GOT:
+      TRACE ("BFD_RELOC_XTENSA_TLS_GOT");
+      return &elf_howto_table[(unsigned) R_XTENSA_TLS_GOT ];
 
     case BFD_RELOC_XTENSA_TLS_FUNC:
       TRACE ("BFD_RELOC_XTENSA_TLS_FUNC");
@@ -518,6 +549,14 @@ elf_xtensa_reloc_type_lookup (bfd *abfd ATTRIBUTE_UNUSED,
     case BFD_RELOC_XTENSA_TLS_CALL:
       TRACE ("BFD_RELOC_XTENSA_TLS_CALL");
       return &elf_howto_table[(unsigned) R_XTENSA_TLS_CALL ];
+
+    case BFD_RELOC_XTENSA_TLS_TPOFF_PTR:
+      TRACE ("BFD_RELOC_XTENSA_TLS_TPOFF_PTR");
+      return &elf_howto_table[(unsigned) R_XTENSA_TLS_TPOFF_PTR ];
+
+    case BFD_RELOC_XTENSA_TLS_TPOFF_LOAD:
+      TRACE ("BFD_RELOC_XTENSA_TLS_TPOFF_LOAD");
+      return &elf_howto_table[(unsigned) R_XTENSA_TLS_TPOFF_LOAD ];
 
     case BFD_RELOC_XTENSA_GOT:
       TRACE ("BFD_RELOC_XTENSA_GOT");
@@ -683,6 +722,7 @@ struct xtensa_global_fdpic_cnts
 {
   bfd_signed_vma funcdesc_cnt;
   bfd_signed_vma gotfuncdesc_cnt;
+  bfd_signed_vma gottlsdesc_cnt;
   bfd_signed_vma gotofffuncdesc_cnt;
   bfd_signed_vma dataref_cnt;
   bfd_signed_vma got_cnt;
@@ -695,6 +735,7 @@ struct xtensa_global_fdpic_cnts
 struct xtensa_local_fdpic_cnts
 {
   bfd_signed_vma funcdesc_cnt;
+  bfd_signed_vma gottlsdesc_cnt;
   bfd_signed_vma gotofffuncdesc_cnt;
   bfd_signed_vma dataref_cnt;
   bfd_signed_vma got_cnt;
@@ -713,6 +754,7 @@ struct elf_xtensa_link_hash_entry
 #define GOT_NORMAL	1
 #define GOT_TLS_GD	2	/* global or local dynamic */
 #define GOT_TLS_IE	4	/* initial or local exec */
+#define GOT_TLS_LOCAL	8	/* together with TLS_IE: LE */
 #define GOT_TLS_ANY	(GOT_TLS_GD | GOT_TLS_IE)
   unsigned char tls_type;
 
@@ -1266,6 +1308,7 @@ elf_xtensa_check_relocs (bfd *abfd,
       /* FDPIC-specific counters */
       bool got_cnt = false;
       bool gotfuncdesc_cnt = false;
+      bool gottlsdesc_cnt = false;
       bool gotofffuncdesc_cnt = false;
       bool funcdesc_cnt = false;
       bool dataref_cnt = false;
@@ -1318,11 +1361,11 @@ elf_xtensa_check_relocs (bfd *abfd,
 	    }
 	  break;
 
-	case R_XTENSA_GOT_TLSDESC_ARG:
+	case R_XTENSA_GOTTLSDESC:
 	  if (bfd_link_dll (info))
 	    {
 	      tls_type = GOT_TLS_GD;
-	      got_cnt = true;
+	      gottlsdesc_cnt = true;
 	    }
 	  else
 	    {
@@ -1330,6 +1373,8 @@ elf_xtensa_check_relocs (bfd *abfd,
 	      if (h && elf_xtensa_hash_entry (h) != htab->tlsbase
 		  && elf_xtensa_dynamic_symbol_p (h, info))
 		got_cnt = true;
+	      else
+		tls_type |= GOT_TLS_LOCAL;
 	    }
 	  break;
 
@@ -1338,22 +1383,50 @@ elf_xtensa_check_relocs (bfd *abfd,
 	    tls_type = GOT_TLS_GD;
 	  else
 	    tls_type = GOT_TLS_IE;
+	  if (htab->fdpic_p && elf_xtensa_dynamic_symbol_p (h, info))
+	    {
+	      _bfd_error_handler
+		(_("%pB: DTPOFF relocation for a dynamic symbol '%s'"),
+		 abfd, h->root.root.string);
+	      return false;
+	    }
 	  break;
 
 	case R_XTENSA_TLS_TPOFF:
 	  tls_type = GOT_TLS_IE;
-	  if (bfd_link_pic (info))
-	    info->flags |= DF_STATIC_TLS;
-	  if (bfd_link_dll (info) || elf_xtensa_dynamic_symbol_p (h, info))
-	    is_got = true;
+	  if (htab->fdpic_p)
+	    {
+	      if (bfd_link_dll (info))
+		{
+		  _bfd_error_handler
+		    (_("%pB: TPOFF relocation in shared object"), abfd);
+		  return false;
+		}
+	      if (elf_xtensa_dynamic_symbol_p (h, info))
+		{
+		  _bfd_error_handler
+		    (_("%pB: TPOFF relocation for a dynamic symbol '%s'"),
+		     abfd, h->root.root.string);
+		  return false;
+		}
+	    }
+	  else
+	    {
+	      if (bfd_link_pic (info))
+		info->flags |= DF_STATIC_TLS;
+	      if (bfd_link_dll (info) || elf_xtensa_dynamic_symbol_p (h, info))
+		is_got = true;
+	    }
 	  break;
 
-	case R_XTENSA_GOT_TLS_TPOFF:
+	case R_XTENSA_TLS_GOTTPOFF:
 	  tls_type = GOT_TLS_IE;
 	  if (bfd_link_pic (info))
 	    info->flags |= DF_STATIC_TLS;
 	  if (bfd_link_dll (info) || elf_xtensa_dynamic_symbol_p (h, info))
 	    got_cnt = true;
+	  else
+	    tls_type |= GOT_TLS_LOCAL;
 	  break;
 
 	case R_XTENSA_32:
@@ -1410,13 +1483,14 @@ elf_xtensa_check_relocs (bfd *abfd,
       if (!htab->fdpic_p
 	  && (got_cnt
 	      || gotfuncdesc_cnt
+	      || gottlsdesc_cnt
 	      || gotofffuncdesc_cnt
 	      || funcdesc_cnt
 	      || dataref_cnt))
 	_bfd_error_handler
 	  (_("%pB: unexpected FDPIC-specific relocation"), abfd);
 
-      if ((got_cnt || gotfuncdesc_cnt || dataref_cnt)
+      if ((got_cnt || gotfuncdesc_cnt || gottlsdesc_cnt || dataref_cnt)
 	  && htab->elf.sgot == NULL
 	  && !create_got_section (htab->elf.dynobj, info))
 	return false;
@@ -1458,6 +1532,8 @@ elf_xtensa_check_relocs (bfd *abfd,
 		++eh->fdpic_cnts.got_cnt;
 	      if (gotfuncdesc_cnt)
 		++eh->fdpic_cnts.gotfuncdesc_cnt;
+	      if (gottlsdesc_cnt)
+		++eh->fdpic_cnts.gottlsdesc_cnt;
 	      if (gotofffuncdesc_cnt)
 		++eh->fdpic_cnts.gotofffuncdesc_cnt;
 	      if (funcdesc_cnt)
@@ -1490,6 +1566,8 @@ elf_xtensa_check_relocs (bfd *abfd,
 	      if (gotfuncdesc_cnt)
 		_bfd_error_handler
 		  (_("%pB: GOTFUNCDESC relocation for local symbol"), abfd);
+	      if (gottlsdesc_cnt)
+		++lc->gottlsdesc_cnt;
 	      if (gotofffuncdesc_cnt)
 		++lc->gotofffuncdesc_cnt;
 	      if (funcdesc_cnt)
@@ -1800,12 +1878,21 @@ elf_xtensa_allocate_dynrelocs (struct elf_link_hash_entry *h, void *arg)
   if (htab == NULL)
     return false;
 
-  /* If we saw any use of an IE model for this symbol, we can then optimize
-     away GOT entries for any TLSDESC_FN relocs.  */
   if ((eh->tls_type & GOT_TLS_IE) != 0)
     {
-      BFD_ASSERT (h->got.refcount >= eh->tlsfunc_refcount);
-      h->got.refcount -= eh->tlsfunc_refcount;
+      if (htab->fdpic_p)
+	{
+	  /* Convert all GD/LD references to IE.  */
+	  eh->fdpic_cnts.got_cnt += eh->fdpic_cnts.gottlsdesc_cnt;
+	  eh->fdpic_cnts.gottlsdesc_cnt = 0;
+	}
+      else
+	{
+	  /* If we saw any use of an IE model for this symbol, we can then optimize
+	     away GOT entries for any TLSDESC_FN relocs.  */
+	  BFD_ASSERT (h->got.refcount >= eh->tlsfunc_refcount);
+	  h->got.refcount -= eh->tlsfunc_refcount;
+	}
     }
 
   if (htab->fdpic_p)
@@ -1816,6 +1903,28 @@ elf_xtensa_allocate_dynrelocs (struct elf_link_hash_entry *h, void *arg)
 	  && h->root.type == bfd_link_hash_undefweak
 	  && !bfd_elf_link_record_dynamic_symbol (info, h))
 	return false;
+
+      if ((eh->tls_type & GOT_TLS_ANY) != 0)
+	{
+	  asection *s = htab->elf.sgot;
+
+	  if (eh->fdpic_cnts.gottlsdesc_cnt)
+	    {
+	      /* TODO: may be caused by user's mistake */
+	      BFD_ASSERT (eh->fdpic_cnts.got_offset == (bfd_vma) -1);
+	      eh->fdpic_cnts.got_offset = s->size;
+	      s->size += 8;
+	      htab->elf.srelgot->size += sizeof (Elf32_External_Rela);
+	    }
+	  /* this is done below by the regular code
+	  else if (eh->fdpic_cnts.got_cnt)
+	    {
+	      eh->fdpic_cnts.got_offset = s->size;
+	      s->size += 4;
+	      htab->elf.srelgot->size += sizeof (Elf32_External_Rela);
+	    }
+	    */
+	}
     }
 
   if (! elf_xtensa_dynamic_symbol_p (h, info))
@@ -1902,6 +2011,7 @@ elf_xtensa_allocate_dynrelocs (struct elf_link_hash_entry *h, void *arg)
       eh->fdpic_cnts.got_offset = s->size;
       s->size += 4;
       if (elf_xtensa_dynamic_symbol_p (&eh->elf, info)
+	  || (eh->tls_type & GOT_TLS_ANY)
 	  || bfd_link_pic (info))
 	htab->elf.srelgot->size += sizeof (Elf32_External_Rela);
       else
@@ -1940,14 +2050,22 @@ elf_xtensa_allocate_local_got_size (struct bfd_link_info *info)
 	  struct xtensa_local_fdpic_cnts *lc =
 	    elf_xtensa_local_fdpic_cnts (i) + j;
 
-	  /* If we saw any use of an IE model for this symbol, we can
-	     then optimize away GOT entries for any TLSDESC_FN relocs.  */
 	  if ((elf_xtensa_local_got_tls_type (i) [j] & GOT_TLS_IE) != 0)
 	    {
-	      bfd_signed_vma *tlsfunc_refcount
-		= &elf_xtensa_local_tlsfunc_refcounts (i) [j];
-	      BFD_ASSERT (local_got_refcounts[j] >= *tlsfunc_refcount);
-	      local_got_refcounts[j] -= *tlsfunc_refcount;
+	      if (htab->fdpic_p)
+		{
+		  lc->got_cnt += lc->gottlsdesc_cnt;
+		  lc->gottlsdesc_cnt = 0;
+		}
+	      else
+		{
+		  /* If we saw any use of an IE model for this symbol, we can
+		     then optimize away GOT entries for any TLSDESC_FN relocs.  */
+		  bfd_signed_vma *tlsfunc_refcount
+		    = &elf_xtensa_local_tlsfunc_refcounts (i) [j];
+		  BFD_ASSERT (local_got_refcounts[j] >= *tlsfunc_refcount);
+		  local_got_refcounts[j] -= *tlsfunc_refcount;
+		}
 	    }
 
 	  if (!htab->fdpic_p)
@@ -1966,11 +2084,11 @@ elf_xtensa_allocate_local_got_size (struct bfd_link_info *info)
 		htab->srofixup->size += lc->dataref_cnt * 4;
 	    }
 
-	  if (lc->got_cnt
-	      && lc->got_offset == (bfd_vma) -1)
+	  if (lc->got_cnt)
 	    {
 	      asection *s = htab->elf.sgot;
 
+	      BFD_ASSERT (lc->got_offset == (bfd_vma) -1);
 	      lc->got_offset = s->size;
 	      s->size += 4;
 	      if (bfd_link_pic (info))
@@ -1987,6 +2105,17 @@ elf_xtensa_allocate_local_got_size (struct bfd_link_info *info)
 	      else
 		htab->srofixup->size += lc->funcdesc_cnt * 4;
 	      elf_xtensa_allocate_local_funcdesc (info, lc);
+	    }
+
+	  if (lc->gottlsdesc_cnt)
+	    {
+	      asection *s = htab->elf.sgot;
+
+	      BFD_ASSERT (lc->got_offset == (bfd_vma) -1);
+	      lc->got_offset = s->size;
+	      s->size += 8;
+	      BFD_ASSERT (bfd_link_pic (info));
+	      htab->elf.srelgot->size += sizeof (Elf32_External_Rela);
 	    }
 	}
     }
@@ -2420,10 +2549,11 @@ elf_xtensa_do_reloc (reloc_howto_type *howto,
     case R_XTENSA_FUNCDESC:
     case R_XTENSA_TLSDESC_FN:
     case R_XTENSA_TLSDESC_ARG:
-    case R_XTENSA_GOT_TLSDESC_ARG:
+    case R_XTENSA_GOTTLSDESC:
+    case R_XTENSA_TLSDESC:
     case R_XTENSA_TLS_DTPOFF:
     case R_XTENSA_TLS_TPOFF:
-    case R_XTENSA_GOT_TLS_TPOFF:
+    case R_XTENSA_TLS_GOTTPOFF:
       bfd_put_32 (abfd, relocation, contents + address);
       return bfd_reloc_ok;
     }
@@ -2950,6 +3080,282 @@ replace_tls_insn (Elf_Internal_Rela *rel,
   return true;
 }
 
+static bool
+encode_tls_subst (xtensa_isa isa, xtensa_insnbuf sbuff,
+		  xtensa_format *pfmt, const char *name,
+		  int n_args, const unsigned int *args)
+{
+  xtensa_format fmt = *pfmt;
+  xtensa_opcode new_op = name
+    ? xtensa_opcode_lookup (isa, name)
+    : xtensa_format_slot_nop_opcode (isa, fmt, 0);
+  int i;
+
+  if (name && new_op == XTENSA_UNDEFINED)
+    return false;
+  /* fmt may not have encoding for this opcode, look for another
+     single-slot format with the same length.  */
+  if (xtensa_opcode_encode (isa, fmt, 0, sbuff, new_op) != 0)
+    {
+      int len = xtensa_format_length (isa, fmt);
+
+      if (len == XTENSA_UNDEFINED)
+	return false;
+      for (fmt = 0; fmt < xtensa_isa_num_formats (isa); ++fmt)
+	if (xtensa_format_num_slots (isa, fmt) == 1
+	    && xtensa_format_length (isa, fmt) == len)
+	  {
+	    if (!name)
+	      new_op = xtensa_format_slot_nop_opcode (isa, fmt, 0);
+	    if (xtensa_opcode_encode (isa, fmt, 0, sbuff, new_op) == 0)
+	      break;
+	  }
+      if (fmt == xtensa_isa_num_formats (isa))
+	return false;
+      *pfmt = fmt;
+    }
+  for (i = 0; i < n_args; ++i)
+    if (xtensa_operand_set_field (isa, new_op, i, fmt, 0, sbuff, args[i]) != 0)
+      return false;
+  return true;
+}
+
+static bool
+encode_tls_subst_mov (xtensa_isa isa, xtensa_insnbuf sbuff,
+		      xtensa_format *pfmt,
+		      unsigned int dst, unsigned int src)
+{
+  xtensa_format fmt = *pfmt;
+  int len = xtensa_format_length (isa, fmt);
+  unsigned int args[3] = {dst, src, src};
+
+  if (len == 3)
+    return encode_tls_subst (isa, sbuff, pfmt, "or", 3, args);
+  else if (len == 2)
+    return encode_tls_subst (isa, sbuff, pfmt, "mov.n", 2, args);
+  else
+    return false;
+}
+
+static bool
+encode_tls_subst_l32i (xtensa_isa isa, xtensa_insnbuf sbuff,
+		       xtensa_format *pfmt,
+		       unsigned int dst, unsigned int src, unsigned int off)
+{
+  xtensa_format fmt = *pfmt;
+  int len = xtensa_format_length (isa, fmt);
+  unsigned int args[3] = {dst, src, off};
+
+  if (len == 3)
+    return encode_tls_subst (isa, sbuff, pfmt, "l32i", 3, args);
+  else if (len == 2)
+    return encode_tls_subst (isa, sbuff, pfmt, "l32i.n", 3, args);
+  else
+    return false;
+}
+
+static bool
+replace_fdpic_tls_insn (Elf_Internal_Rela *rel,
+			bfd *abfd,
+			asection *input_section,
+			bfd_byte *contents,
+			unsigned tls_type,
+			char **error_message)
+{
+  static xtensa_insnbuf ibuff = NULL;
+  static xtensa_insnbuf sbuff = NULL;
+  xtensa_isa isa = xtensa_default_isa;
+  xtensa_format fmt;
+  xtensa_opcode old_op;
+  bfd_size_type input_size;
+  int r_type;
+  unsigned dest_reg, src_reg, off;
+  unsigned int args[3];
+
+  if (ibuff == NULL)
+    {
+      ibuff = xtensa_insnbuf_alloc (isa);
+      sbuff = xtensa_insnbuf_alloc (isa);
+    }
+
+  input_size = bfd_get_section_limit (abfd, input_section);
+
+  /* Read the instruction into a buffer and decode the opcode.  */
+  xtensa_insnbuf_from_chars (isa, ibuff, contents + rel->r_offset,
+			     input_size - rel->r_offset);
+  fmt = xtensa_format_decode (isa, ibuff);
+  if (fmt == XTENSA_UNDEFINED)
+    {
+      *error_message = "cannot decode instruction format";
+      return false;
+    }
+
+  BFD_ASSERT (xtensa_format_num_slots (isa, fmt) == 1);
+  xtensa_format_get_slot (isa, fmt, 0, ibuff, sbuff);
+
+  old_op = xtensa_opcode_decode (isa, fmt, 0, sbuff);
+  if (old_op == XTENSA_UNDEFINED)
+    {
+      *error_message = "cannot decode instruction opcode";
+      return false;
+    }
+
+  r_type = ELF32_R_TYPE (rel->r_info);
+  switch (r_type)
+    {
+    case R_XTENSA_TLS_TPOFF_PTR:
+      if (!(tls_type & GOT_TLS_LOCAL))
+	return true;
+      if ((old_op != get_add_opcode () && old_op != get_addn_opcode ())
+	  || xtensa_operand_get_field (isa, old_op, 0, fmt, 0,
+				       sbuff, &dest_reg) != 0
+	  || xtensa_operand_get_field (isa, old_op, 1, fmt, 0,
+				       sbuff, &src_reg) != 0)
+	{
+	  *error_message = "cannot extract ADD operands for TLS_TPOFF_PTR";
+	  return false;
+	}
+      break;
+
+    case R_XTENSA_TLS_TPOFF_LOAD:
+      if (!(tls_type & GOT_TLS_LOCAL))
+	return true;
+      if ((old_op != get_l32i_opcode () && old_op != get_l32in_opcode ())
+	  || xtensa_operand_get_field (isa, old_op, 0, fmt, 0,
+				       sbuff, &dest_reg) != 0
+	  || xtensa_operand_get_field (isa, old_op, 1, fmt, 0,
+				       sbuff, &src_reg) != 0)
+	{
+	  *error_message = "cannot extract L32I operands for TLS_TPOFF_LOAD";
+	  return false;
+	}
+      break;
+
+    case R_XTENSA_TLS_FUNCDESC:
+      if (!(tls_type & GOT_TLS_LOCAL))
+	{
+	  if ((old_op != get_l32i_opcode () && old_op != get_l32in_opcode ())
+	      || xtensa_operand_get_field (isa, old_op, 1, fmt, 0,
+					   sbuff, &src_reg) != 0
+	      || xtensa_operand_get_field (isa, old_op, 2, fmt, 0,
+					   sbuff, &off) != 0)
+	    {
+	      *error_message = "cannot extract L32I operands for TLS_FUNCDESC";
+	      return false;
+	    }
+	}
+      break;
+
+    case R_XTENSA_TLS_GOT:
+      break;
+
+    case R_XTENSA_TLS_FUNC:
+      if (old_op != get_l32i_opcode ()
+	  || xtensa_operand_get_field (isa, old_op, 0, fmt, 0,
+				       sbuff, &dest_reg) != 0)
+	{
+	  *error_message = "cannot extract L32I destination for TLS_FUNC";
+	  return false;
+	}
+      break;
+
+    case R_XTENSA_TLS_CALL:
+      if (! get_indirect_call_dest_reg (old_op, &dest_reg)
+	  || xtensa_operand_get_field (isa, old_op, 0, fmt, 0,
+				       sbuff, &src_reg) != 0)
+	{
+	  *error_message = "cannot extract CALLXn operands for TLS_CALL";
+	  return false;
+	}
+      break;
+
+    case R_XTENSA_TLS_ARG:
+      if (!(tls_type & GOT_TLS_LOCAL))
+	return true;
+      if ((old_op != get_add_opcode () && old_op != get_addn_opcode ())
+	  || xtensa_operand_get_field (isa, old_op, 0, fmt, 0,
+				       sbuff, &dest_reg) != 0
+	  || xtensa_operand_get_field (isa, old_op, 1, fmt, 0,
+				       sbuff, &src_reg) != 0)
+	{
+	  *error_message = "cannot extract ADD operands for TLS_ARG";
+	  return false;
+	}
+      break;
+
+    default:
+      abort ();
+    }
+
+  switch (r_type)
+    {
+    case R_XTENSA_TLS_FUNCDESC:
+      if (tls_type & GOT_TLS_LOCAL)
+	{
+	  if (! encode_tls_subst (isa, sbuff, &fmt, NULL, 0, NULL))
+	    {
+	      *error_message = "cannot encode NOP for TLS_FUNCDESC";
+	      return false;
+	    }
+	}
+      else
+	{
+	  if (! encode_tls_subst_l32i (isa, sbuff, &fmt, src_reg, src_reg, off))
+	    {
+	      *error_message = "cannot encode L32I for TLS_FUNCDESC";
+	      return false;
+	    }
+	}
+      break;
+
+    case R_XTENSA_TLS_GOT:
+      if (! encode_tls_subst (isa, sbuff, &fmt, NULL, 0, NULL))
+	{
+	  *error_message = "cannot encode NOP for TLS_GOT";
+	  return false;
+	}
+      break;
+
+    case R_XTENSA_TLS_FUNC:
+      if (! encode_tls_subst (isa, sbuff, &fmt, "rur.threadptr", 1, &dest_reg))
+	{
+	  *error_message = "cannot encode RUR.THREADPTR for TLS_FUNC";
+	  return false;
+	}
+      break;
+
+    case R_XTENSA_TLS_CALL:
+      /* Add the CALLX's src register (holding the THREADPTR value)
+	 to the first argument register (holding the offset) and put
+	 the result in the CALLX's return value register.  */
+      args[0] = dest_reg + 2;
+      args[1] = dest_reg + 2;
+      args[2] = src_reg;
+
+      if (! encode_tls_subst (isa, sbuff, &fmt, "add", 3, args))
+	{
+	  *error_message = "cannot encode ADD for TLS_CALL";
+	  return false;
+	}
+      break;
+
+    case R_XTENSA_TLS_TPOFF_PTR:
+    case R_XTENSA_TLS_TPOFF_LOAD:
+    case R_XTENSA_TLS_ARG:
+      if (!encode_tls_subst_mov (isa, sbuff, &fmt, dest_reg, src_reg))
+	{
+	  *error_message = "cannot encode MOV for TLS_ARG/TLS_TPOFF_*";
+	  return false;
+	}
+      break;
+    }
+  xtensa_format_set_slot (isa, fmt, 0, ibuff, sbuff);
+  xtensa_insnbuf_to_chars (isa, ibuff, contents + rel->r_offset,
+			   input_size - rel->r_offset);
+
+  return true;
+}
+
 /* Add an FDPIC read-only fixup.  */
 static void
 elf_xtensa_add_rofixup (bfd *output_bfd, asection *srofixup, bfd_vma offset)
@@ -3030,13 +3436,18 @@ elf_xtensa_fill_funcdesc (bfd *output_bfd,
 #define IS_XTENSA_TLS_RELOC(R_TYPE) \
   ((R_TYPE) == R_XTENSA_TLSDESC_FN \
    || (R_TYPE) == R_XTENSA_TLSDESC_ARG \
-   || (R_TYPE) == R_XTENSA_GOT_TLSDESC_ARG \
+   || (R_TYPE) == R_XTENSA_GOTTLSDESC \
+   || (R_TYPE) == R_XTENSA_TLSDESC \
    || (R_TYPE) == R_XTENSA_TLS_DTPOFF \
    || (R_TYPE) == R_XTENSA_TLS_TPOFF \
-   || (R_TYPE) == R_XTENSA_GOT_TLS_TPOFF \
+   || (R_TYPE) == R_XTENSA_TLS_GOTTPOFF \
+   || (R_TYPE) == R_XTENSA_TLS_FUNCDESC \
+   || (R_TYPE) == R_XTENSA_TLS_GOT \
    || (R_TYPE) == R_XTENSA_TLS_FUNC \
    || (R_TYPE) == R_XTENSA_TLS_ARG \
-   || (R_TYPE) == R_XTENSA_TLS_CALL)
+   || (R_TYPE) == R_XTENSA_TLS_CALL \
+   || (R_TYPE) == R_XTENSA_TLS_TPOFF_PTR \
+   || (R_TYPE) == R_XTENSA_TLS_TPOFF_LOAD)
 
 /* Relocate an Xtensa ELF section.  This is invoked by the linker for
    both relocatable and final links.  */
@@ -3423,17 +3834,6 @@ elf_xtensa_relocate_section (bfd *output_bfd,
 	    }
 	  break;
 
-	case R_XTENSA_GOT_TLS_TPOFF:
-	  /* Switch to LE model for local symbols in an executable.  */
-	  if (! bfd_link_dll (info) && ! dynamic_symbol)
-	    {
-	      relocation = tpoff (info, relocation);
-	      break;
-	    }
-	  if (! dynamic_symbol)
-	    rel->r_addend = -dtpoff_base (info);
-	  /* fall through */
-
 	case R_XTENSA_GOT:
 	    {
 	      struct elf_xtensa_link_hash_entry *eh;
@@ -3469,10 +3869,7 @@ elf_xtensa_relocate_section (bfd *output_bfd,
 		  outrel.r_offset = relocation + sgot->output_section->vma;
 		  if (dynamic_symbol)
 		    {
-		      outrel.r_info = ELF32_R_INFO (h->dynindx,
-						    r_type == R_XTENSA_GOT
-						    ? R_XTENSA_GLOB_DAT
-						    : R_XTENSA_TLS_TPOFF);
+		      outrel.r_info = ELF32_R_INFO (h->dynindx, R_XTENSA_GLOB_DAT);
 		      outrel.r_addend = rel->r_addend;
 		    }
 		  else
@@ -3481,10 +3878,7 @@ elf_xtensa_relocate_section (bfd *output_bfd,
 
 		      if (! is_weak_undef)
 			{
-			  outrel.r_info = ELF32_R_INFO (0,
-							r_type == R_XTENSA_GOT
-							? R_XTENSA_RELATIVE
-							: R_XTENSA_TLS_TPOFF);
+			  outrel.r_info = ELF32_R_INFO (0, R_XTENSA_RELATIVE);
 			  got_value = target;
 			  outrel.r_addend = 0; // only for GOT
 			}
@@ -3574,6 +3968,82 @@ elf_xtensa_relocate_section (bfd *output_bfd,
 	      else
 		{
 		  abort ();
+		}
+
+	      rel->r_addend = 0;
+	    }
+	  break;
+
+	case R_XTENSA_GOTTLSDESC:
+	case R_XTENSA_TLS_GOTTPOFF:
+	    {
+	      struct elf_xtensa_link_hash_entry *eh;
+	      asection *srel = htab->elf.srelgot;
+	      asection *sgot = htab->elf.sgot;
+	      bfd_vma target = relocation + rel->r_addend;
+	      bfd_vma *pgot;
+
+	      if (bfd_link_dll (info))
+		{
+		  if ((tls_type & GOT_TLS_IE) != 0)
+		    r_type = R_XTENSA_TLS_GOTTPOFF;
+		}
+	      else
+		{
+		  if (! dynamic_symbol)
+		    {
+		      r_type = R_XTENSA_TLS_TPOFF;
+		      relocation = tpoff (info, relocation);
+		      break;
+		    }
+		  else
+		    {
+		      r_type = R_XTENSA_TLS_GOTTPOFF;
+		    }
+		}
+
+	      if (! elf_hash_table (info)->dynamic_sections_created)
+		{
+		  error_message =
+		    _("TLS relocation invalid without dynamic sections");
+		  (*info->callbacks->reloc_dangerous)
+		    (info, error_message,
+		     input_bfd, input_section, rel->r_offset);
+		  break;
+		}
+
+	      if (h)
+		{
+		  eh = elf_xtensa_hash_entry (h);
+		  pgot = &eh->fdpic_cnts.got_offset;
+		}
+	      else
+		{
+		  struct xtensa_local_fdpic_cnts *lc =
+		    elf_xtensa_local_fdpic_cnts (input_bfd) + r_symndx;
+
+		  pgot = &lc->got_offset;
+		}
+
+	      relocation = (*pgot & ~1) + sgot->output_offset;
+	      unresolved_reloc = false;
+
+	      if (!(*pgot & 1))
+		{
+		  Elf_Internal_Rela outrel;
+
+		  outrel.r_offset = relocation + sgot->output_section->vma;
+		  outrel.r_info = ELF32_R_INFO (dynamic_symbol ? h->dynindx : 0,
+						r_type == R_XTENSA_GOTTLSDESC
+						? R_XTENSA_TLSDESC
+						: R_XTENSA_TLS_TPOFF);
+		  outrel.r_addend = dynamic_symbol
+		    ? rel->r_addend
+		    : (r_type == R_XTENSA_GOTTLSDESC
+		       ? target - dtpoff_base (info)
+		       : tpoff (info, target));
+		  elf_xtensa_add_dynreloc (output_bfd, info, srel, &outrel);
+		  *pgot |= 1;
 		}
 
 	      rel->r_addend = 0;
@@ -3762,25 +4232,44 @@ elf_xtensa_relocate_section (bfd *output_bfd,
 	    relocation -= dtpoff_base (info);
 	  break;
 
+	case R_XTENSA_TLS_FUNCDESC:
+	case R_XTENSA_TLS_GOT:
 	case R_XTENSA_TLS_FUNC:
 	case R_XTENSA_TLS_ARG:
 	case R_XTENSA_TLS_CALL:
-	  /* Check if optimizing to IE or LE model.  */
-	  if ((tls_type & GOT_TLS_IE) != 0)
+	case R_XTENSA_TLS_TPOFF_PTR:
+	case R_XTENSA_TLS_TPOFF_LOAD:
+	  if (htab->fdpic_p)
 	    {
-	      bool is_ld_model =
-		(h && elf_xtensa_hash_entry (h) == htab->tlsbase);
-	      if (! replace_tls_insn (rel, input_bfd, input_section, contents,
-				      is_ld_model, &error_message))
-		(*info->callbacks->reloc_dangerous)
-		  (info, error_message,
-		   input_bfd, input_section, rel->r_offset);
-
-	      if (r_type != R_XTENSA_TLS_ARG || is_ld_model)
+	      /* Check if optimizing to IE or LE model.  */
+	      if ((tls_type & GOT_TLS_IE) != 0)
 		{
-		  /* Skip subsequent relocations on the same instruction.  */
-		  while (rel + 1 < relend && rel[1].r_offset == rel->r_offset)
-		    rel++;
+		  if (! replace_fdpic_tls_insn (rel, input_bfd, input_section, contents,
+						tls_type, &error_message))
+		    (*info->callbacks->reloc_dangerous)
+		      (info, error_message,
+		       input_bfd, input_section, rel->r_offset);
+		}
+	    }
+	  else
+	    {
+	      /* Check if optimizing to IE or LE model.  */
+	      if ((tls_type & GOT_TLS_IE) != 0)
+		{
+		  bool is_ld_model =
+		    (h && elf_xtensa_hash_entry (h) == htab->tlsbase);
+		  if (! replace_tls_insn (rel, input_bfd, input_section, contents,
+					  is_ld_model, &error_message))
+		    (*info->callbacks->reloc_dangerous)
+		      (info, error_message,
+		       input_bfd, input_section, rel->r_offset);
+
+		  if (r_type != R_XTENSA_TLS_ARG || is_ld_model)
+		    {
+		      /* Skip subsequent relocations on the same instruction.  */
+		      while (rel + 1 < relend && rel[1].r_offset == rel->r_offset)
+			rel++;
+		    }
 		}
 	    }
 	  continue;
@@ -4755,6 +5244,66 @@ get_const16_opcode (void)
       done_lookup = true;
     }
   return const16_opcode;
+}
+
+
+static xtensa_opcode
+get_l32i_opcode (void)
+{
+  static xtensa_opcode l32i_opcode = XTENSA_UNDEFINED;
+  static bool done_lookup = false;
+
+  if (!done_lookup)
+    {
+      l32i_opcode = xtensa_opcode_lookup (xtensa_default_isa, "l32i");
+      done_lookup = true;
+    }
+  return l32i_opcode;
+}
+
+
+static xtensa_opcode
+get_l32in_opcode (void)
+{
+  static xtensa_opcode l32i_opcode = XTENSA_UNDEFINED;
+  static bool done_lookup = false;
+
+  if (!done_lookup)
+    {
+      l32i_opcode = xtensa_opcode_lookup (xtensa_default_isa, "l32i.n");
+      done_lookup = true;
+    }
+  return l32i_opcode;
+}
+
+
+static xtensa_opcode
+get_add_opcode (void)
+{
+  static xtensa_opcode add_opcode = XTENSA_UNDEFINED;
+  static bool done_lookup = false;
+
+  if (!done_lookup)
+    {
+      add_opcode = xtensa_opcode_lookup (xtensa_default_isa, "add");
+      done_lookup = true;
+    }
+  return add_opcode;
+}
+
+
+static xtensa_opcode
+get_addn_opcode (void)
+{
+  static xtensa_opcode add_opcode = XTENSA_UNDEFINED;
+  static bool done_lookup = false;
+
+  if (!done_lookup)
+    {
+      add_opcode = xtensa_opcode_lookup (xtensa_default_isa, "add.n");
+      done_lookup = true;
+    }
+  return add_opcode;
 }
 
 
